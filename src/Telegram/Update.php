@@ -19,4 +19,14 @@ class Update
             || str_starts_with($text, "/{$cmd}@")
             || str_starts_with($text, "/{$cmd} ");
     }
+
+    public function getCommandArg(string $cmd): string
+    {
+        $text = trim($this->getText());
+        $prefix = "/{$cmd} ";
+        if (str_starts_with($text, $prefix)) {
+            return trim(substr($text, strlen($prefix)));
+        }
+        return '';
+    }
 }

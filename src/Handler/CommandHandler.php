@@ -29,32 +29,32 @@ class CommandHandler
         } elseif ($update->isCommand('now')) {
             $this->handleNow($update);
 
+        } elseif ($update->isCommand('ow')) {
+            $cityName = $update->getCommandArg('ow');
+            $this->handlePrayerTimes($update, $cityName);
+
         } elseif (preg_match('/^اوقات\s+(.+)$/u', $text, $m)) {
             $this->handlePrayerTimes($update, trim($m[1]));
         }
     }
 
-    // ─── /start ──────────────────────────────────────────────
+    // ─── /start ──────────────────────────────────────────────────
     private function handleStart(Update $update): void
     {
         $userId = $update->getUserId();
         $isNew  = $this->userRepo->isNew($userId);
-
         $this->userRepo->save($userId);
 
         $name = htmlspecialchars($update->getFirstName(), ENT_QUOTES, 'UTF-8');
 
         $msg = $isNew
-            ? "سلام <b>{$name}</b> عزیز 👋\n\nبه ربات وقت‌یار خوش اومدی 🕌\n\n"
-              . "برای دریافت اوقات شرعی بنویس:\n"
-              . "<code>اوقات تهران</code>\n"
-              . "یا برای زمان الان: /now"
+            ? "سلام <b>{$name}</b> عزیز 👋\n\nبه ربات وقت‌یار خوش اومدی 🕌"
             : "سلام دوباره <b>{$name}</b>! 😊";
 
         $this->api->sendMessage($update->getChatId(), $msg);
     }
 
-    // ─── /now ────────────────────────────────────────────────
+    // ─── /now ────────────────────────────────────────────────────
     private function handleNow(Update $update): void
     {
         $now = $this->dateTime->getNow();
@@ -64,9 +64,17 @@ class CommandHandler
         $this->api->sendMessage($update->getChatId(), $msg);
     }
 
-    // ─── اوقات [شهر] ─────────────────────────────────────────
+    // ─── اوقات شرعی ──────────────────────────────────────────────
     private function handlePrayerTimes(Update $update, string $cityName): void
     {
+        if (empty($cityName)) {
+            $this->api->sendMessage(
+                $update->getChatId(),
+                "📍 نام شهر رو بعد از دستور بنویس:\n<code>/ow کاشان</code>"
+            );
+            return;
+        }
+
         $city = $this->cityRepo->findByName($cityName);
 
         if ($city) {
@@ -86,9 +94,8 @@ class CommandHandler
             return;
         }
 
-        // پیشنهاد شهرهای مشابه
         $suggestions = array_map(
-            fn($c) => "• <code>اوقات {$c['name']}</code> ({$c['province_name']})",
+            fn($c) => "• <code>/ow {$c['name']}</code> ({$c['province_name']})",
             $results
         );
 
