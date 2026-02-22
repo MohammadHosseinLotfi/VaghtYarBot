@@ -2,49 +2,60 @@
 
 namespace App\Service;
 
+require_once __DIR__ . '/../../lib/PrayerTimesCalculator.php';
+
 class PrayerTimeService
 {
     private const LABELS = [
-        's' => ['🌙', 'اذان صبح  '],
-        't' => ['🌅', 'طلوع آفتاب'],
-        'z' => ['☀️', 'اذان ظهر  '],
-        'g' => ['🌆', 'غروب آفتاب'],
-        'm' => ['🌙', 'اذان مغرب '],
-        'n' => ['🌑', 'نیمه شب   '],
+        'fajr'     => ['🌙', 'اذان صبح  '],
+        'sunrise'  => ['🌅', 'طلوع آفتاب'],
+        'dhuhr'    => ['☀️', 'اذان ظهر  '],
+        'asr'      => ['🌤', 'اذان عصر  '],
+        'sunset'   => ['🌆', 'غروب آفتاب'],
+        'maghrib'  => ['🌙', 'اذان مغرب '],
+        'isha'     => ['🌃', 'اذان عشاء '],
+        'midnight' => ['🌑', 'نیمه‌شب    '],
     ];
 
-    public function __construct(private DateTimeService $dateTime)
-    {
-        require_once __DIR__ . '/../../lib/owghat_function.php';
-    }
+    public function __construct(private DateTimeService $dateTime) {}
 
     public function getForCity(array $city): string
     {
-        $now = $this->dateTime->getNow();
+        // timezone باید قبل از new PrayerTimesCalculator ست بشه
+        // چون کتابخونه از date_default_timezone_get() استفاده می‌کنه
+        date_default_timezone_set('Asia/Tehran');
 
-        // ترتیب صحیح: owghat($month, $day, $longitude, $latitude, $seconds, $dst, $farsi)
-        $times = owghat(
-            $now['j_month'],
-            $now['j_day'],
-            (float) $city['longitude'],
-            (float) $city['latitude'],
-            1,   // بدون ثانیه
-            0,   // بدون تابستانی
-            0    // اعداد لاتین
+        $calc = new \PrayerTimesCalculator(
+            method:        'Tehran',
+            highLatMethod: 'NightMiddle',
+            iterations:    1
         );
 
-        return $this->format($city, $now, $times);
+        // در صورت نیاز می‌تونی offset بزنی:
+        // $calc->tune(['fajr' => +1, 'maghrib' => +1]);
+
+        // getTimesSimple → آرایه ساده ['fajr' => '05:19', ...]
+        $times = $calc->getTimesSimple(
+            date:     date('Y-m-d'),
+            coords:   [(float) $city['latitude'], (float) $city['longitude']],
+            timezone: 3.5,
+            dst:      0,
+            format:   '24h'
+        );
+
+        return $this->format($city, $times);
     }
 
-    private function format(array $city, array $now, array $times): string
+    private function format(array $city, array $times): string
     {
+        $now     = $this->dateTime->getNow();
         $lines   = [];
         $lines[] = "🕌 <b>اوقات شرعی {$city['name']}</b> ({$city['province_name']})";
         $lines[] = "📅 {$now['formatted']}";
         $lines[] = "";
 
         foreach (self::LABELS as $key => [$icon, $label]) {
-            if (empty($times[$key])) continue;
+            if (empty($times[$key]) || $times[$key] === '---') continue;
             $lines[] = "{$icon} {$label} : <code>{$times[$key]}</code>";
         }
 
