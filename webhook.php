@@ -21,7 +21,7 @@ $update = new Update($input);
 $db         = getDB();
 $dateTime   = new DateTimeService();
 $prayerTime = new PrayerTimeService($dateTime);
-$calendar   = new CalendarService();
+$calendar   = new CalendarService(new EventRepository($db));
 $api        = new Api();
 
 if ($update->getMessage()) {
@@ -32,7 +32,7 @@ if ($update->getMessage()) {
         $prayerTime,
         $dateTime,
         $calendar,
-        new EventRepository($db)   // ← جدید
+        new EventRepository($db)
     );
     $handler->handle($update);
     exit;

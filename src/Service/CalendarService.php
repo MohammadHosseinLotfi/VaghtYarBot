@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Repository\EventRepository;
 use IntlCalendar;
 use DateTimeZone;
 use DateTime;
@@ -11,39 +12,41 @@ class CalendarService
     private const WEEKDAYS = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج'];
 
     private const MONTHS = [
-        1=>'فروردین',  2=>'اردیبهشت', 3=>'خرداد', 4=>'تیر',
-        5=>'مرداد',    6=>'شهریور',   7=>'مهر',   8=>'آبان',
-        9=>'آذر',      10=>'دی',      11=>'بهمن', 12=>'اسفند'
+        1 => 'فروردین',  2 => 'اردیبهشت', 3 => 'خرداد',  4 => 'تیر',
+        5 => 'مرداد',    6 => 'شهریور',   7 => 'مهر',    8 => 'آبان',
+        9 => 'آذر',     10 => 'دی',      11 => 'بهمن',  12 => 'اسفند',
     ];
 
     private const GREGORIAN_MONTHS = [
-        1=>'ژانویه',   2=>'فوریه',    3=>'مارس',      4=>'آوریل',
-        5=>'مه',       6=>'ژوئن',     7=>'ژوئیه',     8=>'اوت',
-        9=>'سپتامبر',  10=>'اکتبر',   11=>'نوامبر',   12=>'دسامبر',
+        1  => 'ژانویه',   2  => 'فوریه',   3  => 'مارس',
+        4  => 'آوریل',    5  => 'مه',      6  => 'ژوئن',
+        7  => 'ژوئیه',   8  => 'اوت',     9  => 'سپتامبر',
+        10 => 'اکتبر',   11 => 'نوامبر',  12 => 'دسامبر',
     ];
 
     private const WEEKDAY_NAMES = [
-        7 => 'شنبه',  1 => 'یک‌شنبه',    2 => 'دوشنبه',
+        7 => 'شنبه',  1 => 'یک‌شنبه',   2 => 'دوشنبه',
         3 => 'سه‌شنبه', 4 => 'چهارشنبه', 5 => 'پنج‌شنبه', 6 => 'جمعه',
     ];
 
+    public function __construct(private EventRepository $eventRepo) {}
+
     // ── نقطه ورود اصلی ─────────────────────────────────────────
 
-    /** اولین بار که /cal زده میشه: ماه جاری + اطلاعات امروز */
     public function renderCurrentMonth(): array
     {
         [$y, $m, $d] = $this->getTodayJalali();
         return $this->renderDayView($y, $m, $d);
     }
 
-    /** ناوبری ماه قبل/بعد: فقط متن عنوان ماه */
+    /** ناوبری ماه قبل/بعد — بدون مناسبت */
     public function renderMonth(int $jy, int $jm): array
     {
         $keyboard  = $this->buildKeyboard($jy, $jm);
         $monthName = self::MONTHS[$jm] ?? (string)$jm;
 
         $text = "🗓 <b>تقویم {$monthName} {$jy}</b>\n"
-              . "<i>روی هر روز کلیک کن تا تاریخ میلادی رو ببینی.</i>";
+              . "<i>روی هر روز کلیک کن تا اطلاعات روز رو ببینی.</i>";
 
         return [
             'text'         => $text,
@@ -52,7 +55,7 @@ class CalendarService
         ];
     }
 
-    /** کلیک روی یک روز: کیبورد همون ماه + متن اطلاعات روز */
+    /** کلیک روی یک روز: اطلاعات + مناسبت‌ها + کیبورد همون ماه */
     public function renderDayView(int $jy, int $jm, int $jd): array
     {
         $keyboard  = $this->buildKeyboard($jy, $jm);
@@ -60,7 +63,7 @@ class CalendarService
 
         $text = $this->buildDayText($jy, $jm, $jd)
               . "\n\n🗓 <b>تقویم {$monthName} {$jy}</b>\n"
-              . "<i>روی هر روز کلیک کن تا تاریخ میلادی رو ببینی.</i>";
+              . "<i>روی هر روز کلیک کن تا اطلاعات روز رو ببینی.</i>";
 
         return [
             'text'         => $text,
@@ -69,17 +72,36 @@ class CalendarService
         ];
     }
 
-    /** متن خالص اطلاعات یک روز (شمسی + میلادی + روز هفته) */
+    /** متن کامل یک روز: شمسی + میلادی + مناسبت‌ها */
     public function buildDayText(int $jy, int $jm, int $jd): string
     {
         [$gy, $gm, $gd] = $this->jalaliToGregorian($jy, $jm, $jd);
+        [$hy, $hm, $hd] = $this->jalaliToHijri($jy, $jm, $jd);
 
-        $jMonthName = self::MONTHS[$jm]          ?? (string)$jm;
+        $jMonthName = self::MONTHS[$jm]           ?? (string)$jm;
         $gMonthName = self::GREGORIAN_MONTHS[$gm] ?? (string)$gm;
         $weekday    = $this->getWeekdayName($jy, $jm, $jd);
 
-        return "📅 <b>{$jd} {$jMonthName} {$jy}</b> | {$weekday}\n"
-             . "📆 <b>{$gd} {$gMonthName} {$gy}</b>";
+        $text  = "📅 <b>{$jd} {$jMonthName} {$jy}</b> | {$weekday}\n";
+        $text .= "📆 <b>{$gd} {$gMonthName} {$gy}</b>\n";
+        $text .= str_repeat('─', 18) . "\n";
+
+        // ─── مناسبت‌ها از DB ─────────────────────────────────────
+        $events = $this->eventRepo->getTodayEvents($jm, $jd, $hm, $hd);
+
+        if (empty($events)) {
+            $text .= "✅ <i>مناسبتی وجود ندارد</i>";
+        } else {
+            $text .= "📌 <b>مناسبت‌ها:</b>\n";
+            foreach ($events as $e) {
+                $title = htmlspecialchars($e['title'], ENT_QUOTES, 'UTF-8');
+                $icon  = $e['holiday'] ? '🔴' : '▫️';
+                $text .= "{$icon} {$title}\n";
+            }
+            $text = rtrim($text);
+        }
+
+        return $text;
     }
 
     // ── تبدیل تاریخ ────────────────────────────────────────────
@@ -98,21 +120,44 @@ class CalendarService
         return [(int)$dt->format('Y'), (int)$dt->format('n'), (int)$dt->format('j')];
     }
 
+    /** تبدیل شمسی → هجری قمری با IntlCalendar */
+    public function jalaliToHijri(int $jy, int $jm, int $jd): array
+    {
+        // مرحله ۱: شمسی → timestamp (میلی‌ثانیه)
+        $persian = $this->persianCalendar();
+        $persian->clear();
+        $persian->set(IntlCalendar::FIELD_YEAR,         $jy);
+        $persian->set(IntlCalendar::FIELD_MONTH,        $jm - 1);
+        $persian->set(IntlCalendar::FIELD_DAY_OF_MONTH, $jd);
+        $ts = $persian->getTime();
+
+        // مرحله ۲: timestamp → هجری
+        $hijri = IntlCalendar::createInstance(
+            new DateTimeZone('Asia/Tehran'),
+            'fa_IR@calendar=islamic-civil'
+        );
+        $hijri->setTime($ts);
+
+        return [
+            (int) $hijri->get(IntlCalendar::FIELD_YEAR),
+            (int) $hijri->get(IntlCalendar::FIELD_MONTH) + 1, // 0-indexed
+            (int) $hijri->get(IntlCalendar::FIELD_DAY_OF_MONTH),
+        ];
+    }
+
     // ── ساخت کیبورد ─────────────────────────────────────────────
 
     private function buildKeyboard(int $jy, int $jm): array
     {
-        // تشخیص خودکار امروز
         [$ty, $tm, $td] = $this->getTodayJalali();
-        $todayDay = ($jy === $ty && $jm === $tm) ? $td : null;
-
+        $todayDay    = ($jy === $ty && $jm === $tm) ? $td : null;
         $daysInMonth = $this->jalaliDaysInMonth($jy, $jm);
         $firstDowIdx = $this->jalaliFirstDayOfMonthWeekIndex($jy, $jm);
         $monthName   = self::MONTHS[$jm] ?? (string)$jm;
 
         $keyboard = [];
 
-        // ردیف ۱ — عنوان ماه (plain text)
+        // ردیف ۱ — عنوان ماه
         $keyboard[] = [['text' => "📅 {$monthName} {$jy}", 'callback_data' => 'noop']];
 
         // ردیف ۲ — نام روزهای هفته
@@ -131,7 +176,6 @@ class CalendarService
                 if ($cell < $firstDowIdx || $day > $daysInMonth) {
                     $buttons[] = ['text' => ' ', 'callback_data' => 'noop'];
                 } else {
-                    // امروز با [ ] مشخص میشه — plain text، بدون HTML
                     $isToday   = ($todayDay !== null && $day === $todayDay);
                     $label     = $isToday ? "[{$day}]" : (string)$day;
                     $buttons[] = [
@@ -164,9 +208,9 @@ class CalendarService
         $cal = $this->persianCalendar();
         $cal->setTime((int)(microtime(true) * 1000));
         return [
-            (int)$cal->get(IntlCalendar::FIELD_YEAR),
-            (int)$cal->get(IntlCalendar::FIELD_MONTH) + 1,
-            (int)$cal->get(IntlCalendar::FIELD_DAY_OF_MONTH),
+            (int) $cal->get(IntlCalendar::FIELD_YEAR),
+            (int) $cal->get(IntlCalendar::FIELD_MONTH) + 1,
+            (int) $cal->get(IntlCalendar::FIELD_DAY_OF_MONTH),
         ];
     }
 
