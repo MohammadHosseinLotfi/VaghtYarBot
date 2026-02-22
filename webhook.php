@@ -6,6 +6,7 @@ use App\Telegram\Api;
 use App\Telegram\Update;
 use App\Repository\UserRepository;
 use App\Repository\CityRepository;
+use App\Repository\EventRepository;
 use App\Service\DateTimeService;
 use App\Service\PrayerTimeService;
 use App\Service\CalendarService;
@@ -17,11 +18,11 @@ if (empty($input)) exit;
 
 $update = new Update($input);
 
-$db          = getDB();
-$dateTime    = new DateTimeService();
-$prayerTime  = new PrayerTimeService($dateTime);
-$calendar    = new CalendarService();
-$api         = new Api();
+$db         = getDB();
+$dateTime   = new DateTimeService();
+$prayerTime = new PrayerTimeService($dateTime);
+$calendar   = new CalendarService();
+$api        = new Api();
 
 if ($update->getMessage()) {
     $handler = new CommandHandler(
@@ -30,7 +31,8 @@ if ($update->getMessage()) {
         new CityRepository($db),
         $prayerTime,
         $dateTime,
-        $calendar
+        $calendar,
+        new EventRepository($db)   // ← جدید
     );
     $handler->handle($update);
     exit;
