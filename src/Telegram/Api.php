@@ -20,6 +20,25 @@ class Api
         ], $options));
     }
 
+    public function editMessageText(int|string $chatId, int $messageId, string $text, array $options = []): void
+    {
+        $this->request('editMessageText', array_merge([
+            'chat_id'    => $chatId,
+            'message_id' => $messageId,
+            'text'       => $text,
+            'parse_mode' => 'HTML',
+        ], $options));
+    }
+
+    public function answerCallbackQuery(string $callbackQueryId, ?string $text = null, bool $showAlert = false): void
+    {
+        $payload = ['callback_query_id' => $callbackQueryId];
+        if ($text !== null) $payload['text'] = $text;
+        if ($showAlert) $payload['show_alert'] = true;
+
+        $this->request('answerCallbackQuery', $payload);
+    }
+
     private function request(string $method, array $data): array
     {
         $ch = curl_init($this->baseUrl . $method);

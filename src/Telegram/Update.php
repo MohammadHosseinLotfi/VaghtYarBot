@@ -29,4 +29,30 @@ class Update
         }
         return '';
     }
+
+    // ---- Callback Query ----
+    public function isCallbackQuery(): bool
+    {
+        return !empty($this->data['callback_query']);
+    }
+
+    public function getCallbackQueryId(): ?string
+    {
+        return $this->data['callback_query']['id'] ?? null;
+    }
+
+    public function getCallbackData(): string
+    {
+        return $this->data['callback_query']['data'] ?? '';
+    }
+
+    public function getCallbackChatId(): ?int
+    {
+        return $this->data['callback_query']['message']['chat']['id'] ?? null;
+    }
+
+    public function getCallbackMessageId(): ?int
+    {
+        return $this->data['callback_query']['message']['message_id'] ?? null;
+    }
 }

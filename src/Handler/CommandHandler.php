@@ -8,6 +8,7 @@ use App\Repository\UserRepository;
 use App\Repository\CityRepository;
 use App\Service\PrayerTimeService;
 use App\Service\DateTimeService;
+use App\Service\CalendarService;
 
 class CommandHandler
 {
@@ -16,7 +17,8 @@ class CommandHandler
         private UserRepository    $userRepo,
         private CityRepository    $cityRepo,
         private PrayerTimeService $prayerTime,
-        private DateTimeService   $dateTime
+        private DateTimeService   $dateTime,
+        private CalendarService   $calendar
     ) {}
 
     public function handle(Update $update): void
@@ -32,9 +34,13 @@ class CommandHandler
         } elseif ($update->isCommand('ow')) {
             $cityName = $update->getCommandArg('ow');
             $this->handlePrayerTimes($update, $cityName);
-
         } elseif (preg_match('/^اوقات\s+(.+)$/u', $text, $m)) {
             $this->handlePrayerTimes($update, trim($m[1]));
+        } elseif ($update->isCommand('cal')) {
+            $this->handleCal($update);
+
+        } elseif (preg_match('/^تقویم$/u', $text)) {
+            $this->handleCal($update);
         }
     }
 
@@ -103,5 +109,13 @@ class CommandHandler
              . implode("\n", $suggestions);
 
         $this->api->sendMessage($update->getChatId(), $msg);
+    }
+
+    private function handleCal(Update $update): void
+    {
+        $view = $this->calendar->renderCurrentMonth();
+        $this->api->sendMessage($update->getChatId(), $view['text'], [
+            'reply_markup' => $view['reply_markup']
+        ]);
     }
 }
