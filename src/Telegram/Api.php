@@ -11,6 +11,7 @@ class Api
         $this->baseUrl = "https://api.telegram.org/bot" . $_ENV['BOT_TOKEN'] . "/";
     }
 
+    // ─── پیام ساده (HTML) ─────────────────────────────────────────
     public function sendMessage(int|string $chatId, string $text, array $options = []): void
     {
         $this->request('sendMessage', array_merge([
@@ -20,8 +21,36 @@ class Api
         ], $options));
     }
 
-    public function editMessageText(int|string $chatId, int $messageId, string $text, array $options = []): void
+    // ─── Reply Keyboard (دکمه‌های پایین چت) ──────────────────────
+    public function sendReplyKeyboard(
+        int|string $chatId,
+        string     $text,
+        array      $keyboard
+    ): void {
+        $this->sendMessage($chatId, $text, [
+            'reply_markup' => [
+                'keyboard'          => $keyboard,
+                'resize_keyboard'   => true,
+                'one_time_keyboard' => true,
+            ],
+        ]);
+    }
+
+    // ─── حذف Reply Keyboard ───────────────────────────────────────
+    public function removeReplyKeyboard(int|string $chatId, string $text): void
     {
+        $this->sendMessage($chatId, $text, [
+            'reply_markup' => ['remove_keyboard' => true],
+        ]);
+    }
+
+    // ─── ویرایش پیام (برای Inline Keyboard تقویم) ────────────────
+    public function editMessageText(
+        int|string $chatId,
+        int        $messageId,
+        string     $text,
+        array      $options = []
+    ): void {
         $this->request('editMessageText', array_merge([
             'chat_id'    => $chatId,
             'message_id' => $messageId,
@@ -30,15 +59,19 @@ class Api
         ], $options));
     }
 
-    public function answerCallbackQuery(string $callbackQueryId, ?string $text = null, bool $showAlert = false): void
-    {
+    // ─── پاسخ به Callback Query ───────────────────────────────────
+    public function answerCallbackQuery(
+        string  $callbackQueryId,
+        ?string $text      = null,
+        bool    $showAlert = false
+    ): void {
         $payload = ['callback_query_id' => $callbackQueryId];
-        if ($text !== null) $payload['text'] = $text;
-        if ($showAlert) $payload['show_alert'] = true;
-
+        if ($text !== null)  $payload['text']       = $text;
+        if ($showAlert)      $payload['show_alert'] = true;
         $this->request('answerCallbackQuery', $payload);
     }
 
+    // ─── cURL داخلی ───────────────────────────────────────────────
     private function request(string $method, array $data): array
     {
         $ch = curl_init($this->baseUrl . $method);

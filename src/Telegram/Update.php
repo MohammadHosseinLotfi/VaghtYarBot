@@ -22,7 +22,7 @@ class Update
 
     public function getCommandArg(string $cmd): string
     {
-        $text = trim($this->getText());
+        $text   = trim($this->getText());
         $prefix = "/{$cmd} ";
         if (str_starts_with($text, $prefix)) {
             return trim(substr($text, strlen($prefix)));
@@ -30,7 +30,21 @@ class Update
         return '';
     }
 
-    // ---- Callback Query ----
+    // ─── Location ────────────────────────────────────────────────
+    public function hasLocation(): bool
+    {
+        return !empty($this->data['message']['location']);
+    }
+
+    public function getLocation(): array
+    {
+        return [
+            'lat' => (float)($this->data['message']['location']['latitude']  ?? 0.0),
+            'lng' => (float)($this->data['message']['location']['longitude'] ?? 0.0),
+        ];
+    }
+
+    // ─── Callback Query ──────────────────────────────────────────
     public function isCallbackQuery(): bool
     {
         return !empty($this->data['callback_query']);

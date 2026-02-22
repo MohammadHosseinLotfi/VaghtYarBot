@@ -31,4 +31,28 @@ class CityRepository
         $stmt->execute(["%{$name}%"]);
         return $stmt->fetchAll();
     }
+
+    // ─── نزدیک‌ترین شهر با فرمول Haversine (داخل SQL) ────────────
+    public function findNearest(float $lat, float $lng): ?array
+    {
+        $stmt = $this->db->prepare("
+            SELECT
+                c.id, c.name, c.latitude, c.longitude,
+                p.name AS province_name,
+                ROUND(
+                    6371 * ACOS(
+                        COS(RADIANS(:lat)) * COS(RADIANS(c.latitude))
+                        * COS(RADIANS(c.longitude) - RADIANS(:lng))
+                        + SIN(RADIANS(:lat)) * SIN(RADIANS(c.latitude))
+                    ),
+                    1
+                ) AS distance
+            FROM cities c
+            JOIN provinces p ON p.id = c.province_id
+            ORDER BY distance ASC
+            LIMIT 1
+        ");
+        $stmt->execute(['lat' => $lat, 'lng' => $lng]);
+        return $stmt->fetch() ?: null;
+    }
 }

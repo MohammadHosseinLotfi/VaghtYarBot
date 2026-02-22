@@ -22,6 +22,5 @@ CREATE TABLE users (
     id         BIGINT UNSIGNED  NOT NULL  COMMENT 'Telegram user_id',
     created_at TIMESTAMP        NOT NULL  DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP        NOT NULL  DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    KEY idx_city_id (city_id)
+    PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
