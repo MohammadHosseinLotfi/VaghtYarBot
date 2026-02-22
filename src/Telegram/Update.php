@@ -30,6 +30,12 @@ class Update
         return '';
     }
 
+    public function isGroup(): bool
+    {
+        $chatId = $this->getChatId();
+        return $chatId !== null && $chatId < 0;
+    }
+    
     // ─── Location ────────────────────────────────────────────────
     public function hasLocation(): bool
     {

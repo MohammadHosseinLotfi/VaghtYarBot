@@ -65,8 +65,15 @@ class CommandHandler
               . "• <code>/ow نام شهر</code> — اوقات شرعی (مثلاً <code>/ow کاشان</code>)\n"
               . "• <code>/cal</code> — تقویم شمسی\n"
               . "• موقعیت مکانیت رو مستقیم ارسال کن 📍"
-            : "سلام دوباره <b>{$name}</b>! 😊\n"
-              . "<code>/today</code> بزن یا موقعیتت رو بفرست.";
+            : "سلام دوباره <b>{$name}</b>! 😊\n\n"
+              . "• <code>/today</code> — تاریخ و ساعت + مناسبت‌های امروز\n"
+              . "• <code>/ow نام شهر</code> — اوقات شرعی (مثلاً <code>/ow کاشان</code>)\n"
+              . "• <code>/cal</code> — تقویم شمسی";
+
+        if ($update->isGroup()) {
+            $this->api->sendMessage($update->getChatId(), $msg);
+            return;
+        }
 
         $this->api->sendReplyKeyboard(
             $update->getChatId(),
