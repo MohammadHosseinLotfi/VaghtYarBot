@@ -133,7 +133,14 @@ class CommandHandler
             return;
         }
 
+        // ─── ۱. جستجوی دقیق شهر ──────────────────────────────────
         $city = $this->cityRepo->findByName($cityName);
+
+        // ─── ۲. اگه شهر پیدا نشد، شاید نام استان باشه ───────────
+        if (!$city) {
+            $city = $this->cityRepo->findCapitalByProvinceName($cityName);
+        }
+
         if ($city) {
             $this->api->sendMessage(
                 $update->getChatId(),
@@ -142,6 +149,7 @@ class CommandHandler
             return;
         }
 
+        // ─── ۳. پیشنهاد شهرهای مشابه ────────────────────────────
         $results = $this->cityRepo->searchByName($cityName);
         if (empty($results)) {
             $this->api->sendMessage(
@@ -158,8 +166,7 @@ class CommandHandler
 
         $this->api->sendMessage(
             $update->getChatId(),
-            "🔍 شهر <b>{$cityName}</b> پیدا نشد. منظورت اینه؟\n\n"
-            . implode("\n", $suggestions)
+            "🔍 منظورت اینه؟\n\n" . implode("\n", $suggestions)
         );
     }
 
@@ -206,6 +213,7 @@ class CommandHandler
             ['reply_markup' => ['remove_keyboard' => true]]
         );
     }
+
      // ─── تقویم شمسی ────────────────────────────────────────────
     private function handleCal(Update $update): void
     {
