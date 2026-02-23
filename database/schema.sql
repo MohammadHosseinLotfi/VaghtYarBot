@@ -44,3 +44,18 @@ CREATE TABLE `calendar_events` (
   INDEX `idx_holiday` (`holiday`),
   INDEX `idx_type`    (`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE cities (
+    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    province_id SMALLINT UNSIGNED NOT NULL,
+    district_id SMALLINT UNSIGNED NULL,
+    latitude DECIMAL(10,7) NOT NULL,
+    longitude DECIMAL(10,7) NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_name (name),
+    KEY idx_province_id (province_id),
+    KEY idx_district_id (district_id),
+    CONSTRAINT fk_cities_province FOREIGN KEY (province_id) REFERENCES provinces(id),
+    CONSTRAINT fk_cities_district FOREIGN KEY (district_id) REFERENCES districts(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
