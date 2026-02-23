@@ -10,6 +10,7 @@ use App\Repository\EventRepository;
 use App\Service\PrayerTimeService;
 use App\Service\DateTimeService;
 use App\Service\CalendarService;
+use App\Service\GeoService;
 
 class CommandHandler
 {
@@ -20,7 +21,8 @@ class CommandHandler
         private PrayerTimeService $prayerTime,
         private DateTimeService   $dateTime,
         private CalendarService   $calendar,
-        private EventRepository   $eventRepo
+        private EventRepository   $eventRepo,
+        private GeoService        $geoService
     ) {}
 
     public function handle(Update $update): void
@@ -164,31 +166,45 @@ class CommandHandler
     // ─── موقعیت مکانی ────────────────────────────────────────────
     private function handleLocation(Update $update): void
     {
-        $loc     = $update->getLocation();
-        $nearest = $this->cityRepo->findNearest($loc['lat'], $loc['lng']);
+        $loc = $update->getLocation();
+        $lat = (float) $loc['lat'];
+        $lng = (float) $loc['lng'];
 
-        if (!$nearest) {
-            $this->api->sendMessage(
-                $update->getChatId(),
-                "❌ موقعیت شما شناسایی نشد. لطفاً دوباره امتحان کن."
-            );
-            return;
+        // ─── Reverse Geocoding ────────────────────────────────────
+        $geo = $this->geoService->reverseGeocode($lat, $lng);
+
+        // ─── ساخت نام نمایشی ─────────────────────────────────────
+        if ($geo !== null && !empty($geo['city'])) {
+
+            if ($geo['country_code'] === 'ir') {
+                // ایران: شهر + استان
+                $name     = $geo['city'];
+                $province = $geo['state'] ?? 'ایران';
+            } else {
+                // خارج از ایران: شهر + کشور
+                $name     = $geo['city'];
+                $province = $geo['country'] ?? '';
+            }
+
+        } else {
+            // Nominatim جواب نداد یا شهر پیدا نشد
+            $name     = 'موقعیت ارسال‌شده 📍';
+            $province = '';
         }
 
-        $dist = isset($nearest['distance'])
-            ? ' — ' . $nearest['distance'] . ' کیلومتر'
-            : '';
-
+        // ─── اوقات شرعی — همیشه از مختصات ───────────────────────
         $cityData = [
-            'name'          => 'موقعیت شما 📍',
-            'province_name' => "نزدیک به {$nearest['name']}، {$nearest['province_name']}{$dist}",
-            'latitude'      => $loc['lat'],
-            'longitude'     => $loc['lng'],
+            'name'          => $name,
+            'province_name' => $province,
+            'latitude'      => $lat,
+            'longitude'     => $lng,
         ];
 
-        $this->api->sendMessage($update->getChatId(), $this->prayerTime->getForCity($cityData), [
-            'reply_markup' => ['remove_keyboard' => true],
-        ]);
+        $this->api->sendMessage(
+            $update->getChatId(),
+            $this->prayerTime->getForCity($cityData),
+            ['reply_markup' => ['remove_keyboard' => true]]
+        );
     }
      // ─── تقویم شمسی ────────────────────────────────────────────
     private function handleCal(Update $update): void

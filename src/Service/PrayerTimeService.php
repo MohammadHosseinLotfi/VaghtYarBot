@@ -62,7 +62,12 @@ class PrayerTimeService
         $now   = $this->dateTime->getNow();
         $lines = [];
 
-        $lines[] = "🕌 <b>اوقات شرعی {$city['name']}</b> ({$city['province_name']})";
+        // ─── سربرگ — اگر province_name خالی بود پرانتز نزن ─────────
+        $header = !empty($city['province_name'])
+            ? "🕌 <b>اوقات شرعی {$city['name']}</b> ({$city['province_name']})"
+            : "🕌 <b>اوقات شرعی {$city['name']}</b>";
+
+        $lines[] = $header;
         $lines[] = "📅 {$now['formatted']}";
         $lines[] = '';
 
@@ -71,14 +76,12 @@ class PrayerTimeService
             $lines[] = "{$icon} {$label} : <code>{$times[$key]}</code>";
         }
 
-        // ── مانده تا وقت شرعی بعدی (همیشه نمایش داده می‌شه) ───
         $nextLine = $this->getNextPrayerLine($times);
         if ($nextLine !== null) {
             $lines[] = '';
             $lines[] = $nextLine;
         }
 
-        // ── بخش ویژه رمضان (فقط در ماه رمضان) ─────────────────
         $ramadan = $this->getRamadanLine($times);
         if ($ramadan !== null) {
             $lines[] = '';
