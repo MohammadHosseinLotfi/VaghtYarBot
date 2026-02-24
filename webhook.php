@@ -12,6 +12,7 @@ use App\Service\CalendarService;
 use App\Handler\CommandHandler;
 use App\Handler\CallbackHandler;
 use App\Service\GeoService;
+use App\Service\NowruzService;
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (empty($input)) exit;
@@ -24,6 +25,7 @@ try {
     $prayerTime = new PrayerTimeService($dateTime);
     $calendar   = new CalendarService(new EventRepository($db));
     $api        = new Api();
+    $nowruz     = new NowruzService();
 
     if ($update->getMessage()) {
         $handler = new CommandHandler(
@@ -34,7 +36,8 @@ try {
             $dateTime,
             $calendar,
             new EventRepository($db),
-            new GeoService()
+            new GeoService(),
+            $nowruz
         );
         $handler->handle($update);
         exit;

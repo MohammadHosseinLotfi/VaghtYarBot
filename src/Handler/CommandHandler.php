@@ -11,6 +11,7 @@ use App\Service\PrayerTimeService;
 use App\Service\DateTimeService;
 use App\Service\CalendarService;
 use App\Service\GeoService;
+use App\Service\NowruzService;
 
 class CommandHandler
 {
@@ -22,7 +23,8 @@ class CommandHandler
         private DateTimeService   $dateTime,
         private CalendarService   $calendar,
         private EventRepository   $eventRepo,
-        private GeoService        $geoService
+        private GeoService        $geoService,
+        private NowruzService     $nowruzService
     ) {}
 
     public function handle(Update $update): void
@@ -47,6 +49,8 @@ class CommandHandler
             $this->handleCal($update);
         } elseif (preg_match('/^تقویم$/u', $text)) {
             $this->handleCal($update);
+        } elseif ($update->isCommand('nowruz')) {
+            $this->handleNowruz($update);
         }
     }
 
@@ -215,5 +219,14 @@ class CommandHandler
         $this->api->sendMessage($update->getChatId(), $view['text'], [
             'reply_markup' => $view['reply_markup']
         ]);
+    }
+
+    // ─── نوروز ──────────────────────────────────────────────────────
+    private function handleNowruz(Update $update): void
+    {
+        $this->api->sendMessage(
+            $update->getChatId(),
+            $this->nowruzService->getMessage()
+        );
     }
 }
