@@ -70,11 +70,16 @@ class CommandHandler
               . "• <code>/today</code> — تاریخ و ساعت + مناسبت‌های امروز\n"
               . "• <code>/ow نام شهر</code> — اوقات شرعی (مثلاً <code>/ow کاشان</code>)\n"
               . "• <code>/cal</code> — تقویم شمسی\n"
+              . "• <code>/nowruz</code> — لحظه تحویل سال + شمارش معکوس 🌸\n"
+              . "• <code>/nowruz 1406</code> — تحویل سال دلخواه\n"
               . "• موقعیت مکانیت رو مستقیم ارسال کن 📍"
             : "سلام دوباره <b>{$name}</b>! 😊\n\n"
               . "• <code>/today</code> — تاریخ و ساعت + مناسبت‌های امروز\n"
               . "• <code>/ow نام شهر</code> — اوقات شرعی (مثلاً <code>/ow کاشان</code>)\n"
-              . "• <code>/cal</code> — تقویم شمسی";
+              . "• <code>/cal</code> — تقویم شمسی\n"
+              . "• <code>/nowruz</code> — لحظه تحویل سال + شمارش معکوس 🌸\n"
+            . "• <code>/nowruz 1406</code> — تحویل سال دلخواه\n";
+
 
         if ($update->isGroup()) {
             $this->api->sendMessage($update->getChatId(), $msg);
@@ -224,9 +229,10 @@ class CommandHandler
     // ─── نوروز ──────────────────────────────────────────────────────
     private function handleNowruz(Update $update): void
     {
+        $arg = $update->getCommandArg('nowruz');
         $this->api->sendMessage(
             $update->getChatId(),
-            $this->nowruzService->getMessage()
+            $this->nowruzService->getMessage($arg)
         );
     }
 }
