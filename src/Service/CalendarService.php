@@ -31,15 +31,12 @@ class CalendarService
 
     public function __construct(private EventRepository $eventRepo) {}
 
-    // ── نقطه ورود اصلی ─────────────────────────────────────────
-
     public function renderCurrentMonth(): array
     {
         [$y, $m, $d] = $this->getTodayJalali();
         return $this->renderDayView($y, $m, $d);
     }
 
-    /** ناوبری ماه قبل/بعد — بدون مناسبت */
     public function renderMonth(int $jy, int $jm): array
     {
         $keyboard  = $this->buildKeyboard($jy, $jm);
@@ -55,7 +52,6 @@ class CalendarService
         ];
     }
 
-    /** کلیک روی یک روز: اطلاعات + مناسبت‌ها + کیبورد همون ماه */
     public function renderDayView(int $jy, int $jm, int $jd): array
     {
         $keyboard  = $this->buildKeyboard($jy, $jm);
@@ -72,7 +68,6 @@ class CalendarService
         ];
     }
 
-    /** متن کامل یک روز: شمسی + میلادی + مناسبت‌ها */
     public function buildDayText(int $jy, int $jm, int $jd): string
     {
         [$gy, $gm, $gd] = $this->jalaliToGregorian($jy, $jm, $jd);
@@ -86,7 +81,6 @@ class CalendarService
         $text .= "📆 <b>{$gd} {$gMonthName} {$gy}</b>\n";
         $text .= str_repeat('─', 18) . "\n";
 
-        // ─── مناسبت‌ها از DB ─────────────────────────────────────
         $events = $this->eventRepo->getTodayEvents($jm, $jd, $hm, $hd);
 
         if (empty($events)) {
@@ -104,8 +98,6 @@ class CalendarService
         return $text;
     }
 
-    // ── تبدیل تاریخ ────────────────────────────────────────────
-
     public function jalaliToGregorian(int $jy, int $jm, int $jd): array
     {
         $cal = $this->persianCalendar();
@@ -120,10 +112,8 @@ class CalendarService
         return [(int)$dt->format('Y'), (int)$dt->format('n'), (int)$dt->format('j')];
     }
 
-    /** تبدیل شمسی → هجری قمری با IntlCalendar */
     public function jalaliToHijri(int $jy, int $jm, int $jd): array
     {
-        // مرحله ۱: شمسی → timestamp (میلی‌ثانیه)
         $persian = $this->persianCalendar();
         $persian->clear();
         $persian->set(IntlCalendar::FIELD_YEAR,         $jy);
@@ -131,7 +121,6 @@ class CalendarService
         $persian->set(IntlCalendar::FIELD_DAY_OF_MONTH, $jd);
         $ts = $persian->getTime();
 
-        // مرحله ۲: timestamp → هجری
         $hijri = IntlCalendar::createInstance(
             new DateTimeZone('Asia/Tehran'),
             'fa_IR@calendar=islamic-civil'
@@ -144,8 +133,6 @@ class CalendarService
             (int) $hijri->get(IntlCalendar::FIELD_DAY_OF_MONTH),
         ];
     }
-
-    // ── ساخت کیبورد ─────────────────────────────────────────────
 
     private function buildKeyboard(int $jy, int $jm): array
     {
@@ -200,8 +187,6 @@ class CalendarService
 
         return $keyboard;
     }
-
-    // ── ابزارها ─────────────────────────────────────────────────
 
     public function getTodayJalali(): array
     {

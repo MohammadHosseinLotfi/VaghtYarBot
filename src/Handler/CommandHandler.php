@@ -91,7 +91,6 @@ class CommandHandler
     {
         $now = $this->dateTime->getNow();
 
-        // بخش تاریخ
         $msg  = "⏰ ساعت: <code>{$now['time']}</code>\n\n";
         $msg .= "📅 <b>شمسی:</b>  {$now['formatted']}\n";
         $msg .= "📆 <b>میلادی:</b> {$now['g_day']} {$now['g_month_name']} {$now['g_year']}\n";
@@ -102,7 +101,6 @@ class CommandHandler
 
         $msg .= str_repeat('─', 18) . "\n";
 
-        // بخش مناسبت‌ها
         $events = $this->eventRepo->getTodayEvents(
             $now['j_month'], $now['j_day'],
             $now['h_month'], $now['h_day']
@@ -133,10 +131,8 @@ class CommandHandler
             return;
         }
 
-        // ─── ۱. جستجوی دقیق شهر ──────────────────────────────────
         $city = $this->cityRepo->findByName($cityName);
 
-        // ─── ۲. اگه شهر پیدا نشد، شاید نام استان باشه ───────────
         if (!$city) {
             $city = $this->cityRepo->findCapitalByProvinceName($cityName);
         }
@@ -149,7 +145,6 @@ class CommandHandler
             return;
         }
 
-        // ─── ۳. پیشنهاد شهرهای مشابه ────────────────────────────
         $results = $this->cityRepo->searchByName($cityName);
         if (empty($results)) {
             $this->api->sendMessage(
@@ -177,34 +172,33 @@ class CommandHandler
         $lat = (float) $loc['lat'];
         $lng = (float) $loc['lng'];
 
-        // ─── Reverse Geocoding ────────────────────────────────────
         $geo = $this->geoService->reverseGeocode($lat, $lng);
 
-        // ─── ساخت نام نمایشی ─────────────────────────────────────
         if ($geo !== null && !empty($geo['city'])) {
 
             if ($geo['country_code'] === 'ir') {
-                // ایران: شهر + استان
                 $name     = $geo['city'];
                 $province = $geo['state'] ?? 'ایران';
             } else {
-                // خارج از ایران: شهر + کشور
                 $name     = $geo['city'];
                 $province = $geo['country'] ?? '';
             }
 
         } else {
-            // Nominatim جواب نداد یا شهر پیدا نشد
             $name     = 'موقعیت ارسال‌شده 📍';
             $province = '';
         }
 
-        // ─── اوقات شرعی — همیشه از مختصات ───────────────────────
+        $tzName = ($geo !== null && !empty($geo['timezone']))
+        ? $geo['timezone']
+        : 'Asia/Tehran';
+
         $cityData = [
             'name'          => $name,
             'province_name' => $province,
             'latitude'      => $lat,
             'longitude'     => $lng,
+            'timezone'      => $tzName
         ];
 
         $this->api->sendMessage(

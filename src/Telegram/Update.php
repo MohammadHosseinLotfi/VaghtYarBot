@@ -35,8 +35,7 @@ class Update
         $chatId = $this->getChatId();
         return $chatId !== null && $chatId < 0;
     }
-    
-    // ─── Location ────────────────────────────────────────────────
+
     public function hasLocation(): bool
     {
         return !empty($this->data['message']['location']);
@@ -50,7 +49,6 @@ class Update
         ];
     }
 
-    // ─── Callback Query ──────────────────────────────────────────
     public function isCallbackQuery(): bool
     {
         return !empty($this->data['callback_query']);

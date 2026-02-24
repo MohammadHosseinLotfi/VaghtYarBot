@@ -1,5 +1,5 @@
 <?php
-
+date_default_timezone_set('Asia/Tehran');
 use Dotenv\Dotenv;
 
 require_once __DIR__ . '/../vendor/autoload.php';

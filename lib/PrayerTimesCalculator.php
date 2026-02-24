@@ -34,10 +34,6 @@ declare(strict_types=1);
  * ════════════════════════════════════════════════════════════════════════
  */
 
-// ═══════════════════════════════════════════════════════════════════════
-//  کلاس کمکی ریاضیات درجه‌ای (Degree-based Math)
-// ═══════════════════════════════════════════════════════════════════════
-
 final class DMath
 {
     /** درجه → رادیان */
@@ -120,16 +116,8 @@ final class DMath
     }
 }
 
-
-// ═══════════════════════════════════════════════════════════════════════
-//  کلاس اصلی محاسبه اوقات شرعی
-// ═══════════════════════════════════════════════════════════════════════
-
 class PrayerTimesCalculator
 {
-    // ─────────────────────────────────────────────────────────────────
-    //  نام اوقات
-    // ─────────────────────────────────────────────────────────────────
 
     /** @var array<string, array{en: string, fa: string}> */
     private const TIME_LABELS = [
@@ -143,10 +131,6 @@ class PrayerTimesCalculator
         'isha'     => ['en' => 'Isha',     'fa' => 'اذان عشاء'],
         'midnight' => ['en' => 'Midnight', 'fa' => 'نیمه‌شب شرعی'],
     ];
-
-    // ─────────────────────────────────────────────────────────────────
-    //  روش‌های محاسبه
-    // ─────────────────────────────────────────────────────────────────
 
     /**
      * هر روش شامل:
@@ -252,21 +236,15 @@ class PrayerTimesCalculator
         ],
     ];
 
-    /** پارامترهای پیش‌فرض (اگر در روش تعریف نشده باشند) */
     private const DEFAULT_PARAMS = [
-        'imsak'    => '10 min',   // ۱۰ دقیقه قبل از فجر
-        'maghrib'  => '0 min',    // غروب استاندارد
-        'midnight' => 'Standard', // نصف‌الیل سنی
-        'asr'      => 'Standard', // شافعی/مالکی/حنبلی/جعفری
+        'imsak'    => '10 min',
+        'maghrib'  => '0 min',
+        'midnight' => 'Standard',
+        'asr'      => 'Standard',
     ];
-
-    // ─────────────────────────────────────────────────────────────────
-    //  ویژگی‌های شیء
-    // ─────────────────────────────────────────────────────────────────
 
     private string $calcMethod;
 
-    /** تنظیمات فعال محاسبه */
     private array $setting = [
         'imsak'    => '10 min',
         'fajr'     => 0,
@@ -280,33 +258,21 @@ class PrayerTimesCalculator
         'highLats' => 'NightMiddle',
     ];
 
-    /** فرمت زمان — '24h' | '12h' | '12hNS' | 'Float' */
     private string $timeFormat = '24h';
 
-    /** پسوندهای AM/PM */
     private array $timeSuffixes = ['am', 'pm'];
 
-    /** رشته نمایشی برای زمان نامعتبر */
     private string $invalidTime = '---';
 
-    /** تعداد تکرار محاسبات (هرچه بیشتر، دقیق‌تر — ۱ معمولاً کافی است) */
     private int $numIterations = 1;
 
-    /** آفست‌های دقیقه‌ای کاربر (tune) */
     private array $offset = [];
-
-    // ─── مختصات داخلی ───
 
     private float $lat      = 0.0;
     private float $lng      = 0.0;
     private float $elv      = 0.0;
     private float $timeZone = 0.0;
     private float $jDate    = 0.0;
-
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  سازنده
-    // ═══════════════════════════════════════════════════════════════════
 
     /**
      * @param string $method        روش محاسبه
@@ -320,22 +286,15 @@ class PrayerTimesCalculator
     ) {
         $this->numIterations = max(1, $iterations);
 
-        // تنظیم روش محاسبه
         $this->setMethod(
             array_key_exists($method, self::METHODS) ? $method : 'Tehran'
         );
 
-        // روش عرض‌های بالا
         $validHL = ['NightMiddle', 'AngleBased', 'OneSeventh', 'None'];
         $this->setting['highLats'] = in_array($highLatMethod, $validHL, true)
             ? $highLatMethod
             : 'NightMiddle';
     }
-
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  رابط عمومی (Public API)
-    // ═══════════════════════════════════════════════════════════════════
 
     /**
      * تنظیم روش محاسبه
@@ -381,8 +340,6 @@ class PrayerTimesCalculator
         return $this;
     }
 
-    // ─── Getters ───
-
     public function getMethod(): string  { return $this->calcMethod; }
     public function getSetting(): array  { return $this->setting; }
     public function getOffsets(): array   { return $this->offset; }
@@ -403,11 +360,6 @@ class PrayerTimesCalculator
         }
         return $result;
     }
-
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  متد اصلی محاسبه
-    // ═══════════════════════════════════════════════════════════════════
 
     /**
      * محاسبه اوقات شرعی
@@ -433,16 +385,13 @@ class PrayerTimesCalculator
         int|string|null                $dst      = null,
         string                         $format   = '24h',
     ): array {
-        // ── مختصات ──
         $this->lat = (float) $coords[0];
         $this->lng = (float) $coords[1];
         $this->elv = isset($coords[2]) ? max(0.0, (float) $coords[2]) : 0.0;
         $this->timeFormat = $format;
 
-        // ── تبدیل تاریخ ──
         $dateArray = $this->normalizeDate($date);
 
-        // ── منطقه زمانی ──
         if ($timezone === null || $timezone === 'auto') {
             $timezone = $this->getTimeZone($dateArray);
         }
@@ -451,14 +400,11 @@ class PrayerTimesCalculator
         }
         $this->timeZone = (float) $timezone + ($dst ? 1.0 : 0.0);
 
-        // ── تاریخ ژولیوسی ──
         $this->jDate = $this->julian($dateArray[0], $dateArray[1], $dateArray[2])
                        - $this->lng / (15.0 * 24.0);
 
-        // ── محاسبه ──
         $rawTimes = $this->computeTimes();
 
-        // ── ساخت خروجی ساختاریافته ──
         $dateStr = sprintf('%04d-%02d-%02d', $dateArray[0], $dateArray[1], $dateArray[2]);
         $cfg     = self::METHODS[$this->calcMethod];
 
@@ -504,11 +450,6 @@ class PrayerTimesCalculator
         }
         return $result;
     }
-
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  محاسبات نجومی (هسته)
-    // ═══════════════════════════════════════════════════════════════════
 
     /**
      * موقعیت خورشید: میل (declination) و معادله زمان (equation of time)
@@ -581,11 +522,6 @@ class PrayerTimesCalculator
     {
         return 0.833 + 0.0347 * sqrt(max(0.0, $elevation));
     }
-
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  خط لوله محاسبات
-    // ═══════════════════════════════════════════════════════════════════
 
     /**
      * محاسبه تمام اوقات — تکراری → تنظیم → نیمه‌شب → tune → فرمت
@@ -680,11 +616,6 @@ class PrayerTimesCalculator
         return $times;
     }
 
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  اصلاح عرض‌های جغرافیایی بالا
-    // ═══════════════════════════════════════════════════════════════════
-
     /**
      * اصلاح اوقات برای مناطقی که شفق از بین نمی‌رود
      */
@@ -734,11 +665,6 @@ class PrayerTimesCalculator
         };
         return $portion * $night;
     }
-
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  توابع کمکی
-    // ═══════════════════════════════════════════════════════════════════
 
     /**
      * ضریب سایه عصر
@@ -900,11 +826,6 @@ class PrayerTimesCalculator
         return DMath::fixHour($time2 - $time1);
     }
 
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  تشخیص خودکار منطقه زمانی
-    // ═══════════════════════════════════════════════════════════════════
-
     /**
      * آفست UTC استاندارد (بدون DST) بر حسب ساعت
      */
@@ -940,11 +861,6 @@ class PrayerTimesCalculator
             return 0.0;
         }
     }
-
-
-    // ═══════════════════════════════════════════════════════════════════
-    //  متد سازگار با فایل اول (backward compatibility)
-    // ═══════════════════════════════════════════════════════════════════
 
     /**
      * محاسبه ساده — سازگار با رابط فایل اول

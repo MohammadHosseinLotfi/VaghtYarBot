@@ -22,7 +22,6 @@ class CallbackHandler
 
         if (!$cbId || !$chatId || !$msgId) return;
 
-        // ── ناوبری ماه ──────────────────────────────────────────
         if (preg_match('/^cal:(\d{4}):(\d{1,2})$/', $data, $m)) {
             $view = $this->calendar->renderMonth((int)$m[1], (int)$m[2]);
             $this->api->editMessageText($chatId, $msgId, $view['text'], [
@@ -32,7 +31,6 @@ class CallbackHandler
             return;
         }
 
-        // ── دکمه امروز ──────────────────────────────────────────
         if ($data === 'cal:today') {
             $view = $this->calendar->renderCurrentMonth();
             $this->api->editMessageText($chatId, $msgId, $view['text'], [
@@ -42,8 +40,6 @@ class CallbackHandler
             return;
         }
 
-        // ── کلیک روی روز ────────────────────────────────────────
-        // کیبورد عوض نمیشه، فقط متن پیام تغییر میکنه
         if (preg_match('/^calday:(\d{4}):(\d{1,2}):(\d{1,2})$/', $data, $m)) {
             $jy = (int)$m[1];
             $jm = (int)$m[2];
@@ -58,7 +54,6 @@ class CallbackHandler
             return;
         }
 
-        // ── noop (هدر ماه، نام روز هفته) ────────────────────────
         $this->api->answerCallbackQuery($cbId);
     }
 }

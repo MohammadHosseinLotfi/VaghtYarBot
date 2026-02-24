@@ -1,5 +1,4 @@
 <?php
-
 require_once __DIR__ . '/config/bootstrap.php';
 
 use App\Telegram\Api;
@@ -19,31 +18,49 @@ if (empty($input)) exit;
 
 $update = new Update($input);
 
-$db         = getDB();
-$dateTime   = new DateTimeService();
-$prayerTime = new PrayerTimeService($dateTime);
-$calendar   = new CalendarService(new EventRepository($db));
-$api        = new Api();
+try {
+    $db         = getDB();
+    $dateTime   = new DateTimeService();
+    $prayerTime = new PrayerTimeService($dateTime);
+    $calendar   = new CalendarService(new EventRepository($db));
+    $api        = new Api();
 
-if ($update->getMessage()) {
-    $handler = new CommandHandler(
-        $api,
-        new UserRepository($db),
-        new CityRepository($db),
-        $prayerTime,
-        $dateTime,
-        $calendar,
-        new EventRepository($db),
-        new GeoService()
-    );
-    $handler->handle($update);
-    exit;
+    if ($update->getMessage()) {
+        $handler = new CommandHandler(
+            $api,
+            new UserRepository($db),
+            new CityRepository($db),
+            $prayerTime,
+            $dateTime,
+            $calendar,
+            new EventRepository($db),
+            new GeoService()
+        );
+        $handler->handle($update);
+        exit;
+    }
+
+    if ($update->isCallbackQuery()) {
+        (new CallbackHandler($api, $calendar))->handle($update);
+        exit;
+    }
+
+} catch (\Throwable $e) {
+    // لاگ کردن خطا
+    error_log(sprintf(
+        '[VaghtYarBot] %s | %s:%d | Trace: %s',
+        $e->getMessage(),
+        $e->getFile(),
+        $e->getLine(),
+        $e->getTraceAsString()
+    ));
+
+    // اطلاع به کاربر
+    $chatId = $update->getChatId() ?? $update->getCallbackChatId();
+    if ($chatId) {
+        try {
+            (new Api())->sendMessage((int)$chatId, '⚠️ خطایی رخ داد. لطفاً دوباره امتحان کن.');
+        } catch (\Throwable) {}
+    }
 }
-
-if ($update->isCallbackQuery()) {
-    $cbHandler = new CallbackHandler($api, $calendar);
-    $cbHandler->handle($update);
-    exit;
-}
-
 exit;

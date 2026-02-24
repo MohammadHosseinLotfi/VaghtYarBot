@@ -39,7 +39,6 @@ class GeoService
         ];
     }
 
-    // ─── HTTP با cURL / fallback به file_get_contents ────────────
     private function fetch(string $url): ?string
     {
         if (function_exists('curl_init')) {

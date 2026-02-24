@@ -26,41 +26,43 @@ class DateTimeService
     public function __construct()
     {
         require_once __DIR__ . '/../../lib/jdf.php';
-        date_default_timezone_set('Asia/Tehran');
     }
 
     public function getNow(): array
     {
         $ts = time();
 
-        // شمسی
-        $jYear  = (int) jdate('Y', $ts);
-        $jMonth = (int) jdate('m', $ts);
-        $jDay   = (int) jdate('d', $ts);
+        $persian = IntlCalendar::createInstance(
+            new DateTimeZone('Asia/Tehran'),
+            'fa_IR@calendar=persian'
+        );
+        $persian->setTime($ts * 1000);
+        $jYear  = (int) $persian->get(IntlCalendar::FIELD_YEAR);
+        $jMonth = (int) $persian->get(IntlCalendar::FIELD_MONTH) + 1; // 0-indexed
+        $jDay   = (int) $persian->get(IntlCalendar::FIELD_DAY_OF_MONTH);
 
-        // میلادی
+        $formatted = jdate('l، j F Y', $ts);
+        $dayName   = jdate('l', $ts);
+        $monthName = jdate('F', $ts);
+
         $gYear  = (int) date('Y', $ts);
         $gMonth = (int) date('n', $ts);
         $gDay   = (int) date('j', $ts);
 
-        // قمری
         [$hYear, $hMonth, $hDay] = $this->getHijriDate($ts);
 
         return [
-            // شمسی
             'j_year'       => $jYear,
             'j_month'      => $jMonth,
             'j_day'        => $jDay,
-            'day_name'     => jdate('l', $ts),
-            'month_name'   => jdate('F', $ts),
-            'formatted'    => jdate('l، j F Y', $ts),
+            'day_name'     => $dayName,
+            'month_name'   => $monthName,
+            'formatted'    => $formatted,
             'time'         => date('H:i:s', $ts),
-            // میلادی
             'g_year'       => $gYear,
             'g_month'      => $gMonth,
             'g_day'        => $gDay,
             'g_month_name' => self::GREGORIAN_MONTHS[$gMonth] ?? (string) $gMonth,
-            // قمری
             'h_year'       => $hYear,
             'h_month'      => $hMonth,
             'h_day'        => $hDay,

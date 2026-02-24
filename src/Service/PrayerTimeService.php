@@ -9,7 +9,6 @@ use DateTimeZone;
 
 class PrayerTimeService
 {
-    // ── لیبل‌های نمایشی ─────────────────────────────────────────
     private const LABELS = [
         'fajr'     => ['🌙', 'اذان صبح  '],
         'sunrise'  => ['🌅', 'طلوع آفتاب'],
@@ -21,7 +20,6 @@ class PrayerTimeService
         'midnight' => ['🌑', 'نیمه‌شب    '],
     ];
 
-    // ── فقط اذان‌ها برای محاسبه «مانده» (نه طلوع/غروب) ─────────
     private const NEXT_PRAYERS = [
         'fajr'    => 'اذان صبح',
         'dhuhr'   => 'اذان ظهر',
@@ -32,11 +30,24 @@ class PrayerTimeService
 
     public function __construct(private DateTimeService $dateTime) {}
 
-    // ── نقطه ورود اصلی ──────────────────────────────────────────
-
     public function getForCity(array $city): string
     {
-        date_default_timezone_set('Asia/Tehran');
+        $tzName = $city['timezone'] ?? 'Asia/Tehran';
+        $tz = new \DateTimeZone($tzName);
+
+        // تاریخ "امروز" در timezone همان شهر/موقعیت
+        $now = new \DateTimeImmutable('now', $tz);
+        $date = $now->format('Y-m-d');
+
+        // Offset فعلی (ساعت)
+        $currentOffsetHours = $tz->getOffset($now) / 3600;
+
+        // Offset استاندارد (زمستان/بدون DST) با گرفتن یک تاریخ وسط ژانویه
+        $jan = new \DateTimeImmutable($now->format('Y') . '-01-15 12:00:00', $tz);
+        $standardOffsetHours = $tz->getOffset($jan) / 3600;
+
+        // DST اگر Offset فعلی از Offset استاندارد بیشتر بود
+        $dst = ($currentOffsetHours > $standardOffsetHours) ? 1 : 0;
 
         $calc = new \PrayerTimesCalculator(
             method:        'Tehran',
@@ -45,24 +56,21 @@ class PrayerTimeService
         );
 
         $times = $calc->getTimesSimple(
-            date:     date('Y-m-d'),
+            date:     $date,
             coords:   [(float)$city['latitude'], (float)$city['longitude']],
-            timezone: 3.5,
-            dst:      0,
+            timezone: $standardOffsetHours,
+            dst:      $dst,
             format:   '24h'
         );
 
         return $this->format($city, $times);
     }
 
-    // ── فرمت‌بندی پیام ──────────────────────────────────────────
-
     private function format(array $city, array $times): string
     {
         $now   = $this->dateTime->getNow();
         $lines = [];
 
-        // ─── سربرگ — اگر province_name خالی بود پرانتز نزن ─────────
         $header = !empty($city['province_name'])
             ? "🕌 <b>اوقات شرعی {$city['name']}</b> ({$city['province_name']})"
             : "🕌 <b>اوقات شرعی {$city['name']}</b>";
@@ -91,8 +99,6 @@ class PrayerTimeService
         return implode("\n", $lines);
     }
 
-    // ── مانده تا وقت شرعی بعدی ──────────────────────────────────
-
     private function getNextPrayerLine(array $times): ?string
     {
         $nowMin = $this->timeToMinutes(date('H:i'));
@@ -118,8 +124,6 @@ class PrayerTimeService
         return null;
     }
 
-    // ── بخش ماه رمضان ───────────────────────────────────────────
-
     private function getRamadanLine(array $times): ?string
     {
         if (!$this->isRamadan()) return null;
@@ -128,14 +132,12 @@ class PrayerTimeService
         $fajrMin    = (!empty($times['fajr'])    && $times['fajr']    !== '---') ? $this->timeToMinutes($times['fajr'])    : null;
         $maghribMin = (!empty($times['maghrib']) && $times['maghrib'] !== '---') ? $this->timeToMinutes($times['maghrib']) : null;
 
-        // قبل از اذان صبح → مانده تا سحر
         if ($fajrMin !== null && $nowMin < $fajrMin) {
             $duration = $this->toDuration($fajrMin - $nowMin);
             return "🌙 <b>ماه مبارک رمضان</b>\n"
                  . "🍽 سحر ساعت <code>{$times['fajr']}</code> — {$duration} دیگه";
         }
 
-        // بعد از فجر و قبل از مغرب → مانده تا افطار
         if ($fajrMin !== null && $maghribMin !== null
             && $nowMin >= $fajrMin && $nowMin < $maghribMin) {
             $duration = $this->toDuration($maghribMin - $nowMin);
@@ -143,11 +145,8 @@ class PrayerTimeService
                  . "🍽 افطار ساعت <code>{$times['maghrib']}</code> — {$duration} دیگه";
         }
 
-        // بعد از مغرب → افطار شده، چیزی نمایش نده
         return null;
     }
-
-    // ── تشخیص ماه رمضان با IntlCalendar ────────────────────────
 
     private function isRamadan(): bool
     {
@@ -162,8 +161,6 @@ class PrayerTimeService
         // FIELD_MONTH صفر-پایه است: 0=محرم ... 8=رمضان
         return $cal->get(IntlCalendar::FIELD_MONTH) === 8;
     }
-
-    // ── ابزارهای زمانی ───────────────────────────────────────────
 
     private function timeToMinutes(string $time): int
     {
