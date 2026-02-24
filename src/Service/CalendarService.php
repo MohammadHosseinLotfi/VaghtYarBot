@@ -24,6 +24,13 @@ class CalendarService
         10 => 'اکتبر',   11 => 'نوامبر',  12 => 'دسامبر',
     ];
 
+    private const HIJRI_MONTHS = [
+        1  => 'محرم',        2  => 'صفر',          3  => 'ربیع‌الاول',
+        4  => 'ربیع‌الثانی', 5  => 'جمادی‌الاول',  6  => 'جمادی‌الثانی',
+        7  => 'رجب',         8  => 'شعبان',         9  => 'رمضان',
+        10 => 'شوال',        11 => 'ذی‌القعده',     12 => 'ذی‌الحجه',
+    ];
+
     private const WEEKDAY_NAMES = [
         7 => 'شنبه',  1 => 'یک‌شنبه',   2 => 'دوشنبه',
         3 => 'سه‌شنبه', 4 => 'چهارشنبه', 5 => 'پنج‌شنبه', 6 => 'جمعه',
@@ -75,10 +82,12 @@ class CalendarService
 
         $jMonthName = self::MONTHS[$jm]           ?? (string)$jm;
         $gMonthName = self::GREGORIAN_MONTHS[$gm] ?? (string)$gm;
+        $hMonthName = self::HIJRI_MONTHS[$hm]     ?? (string)$hm;
         $weekday    = $this->getWeekdayName($jy, $jm, $jd);
 
         $text  = "📅 <b>{$jd} {$jMonthName} {$jy}</b> | {$weekday}\n";
         $text .= "📆 <b>{$gd} {$gMonthName} {$gy}</b>\n";
+        $text .= "🌙 <b>{$hd} {$hMonthName} {$hy}</b>\n";
         $text .= str_repeat('─', 18) . "\n";
 
         $events = $this->eventRepo->getTodayEvents($jm, $jd, $hm, $hd);
