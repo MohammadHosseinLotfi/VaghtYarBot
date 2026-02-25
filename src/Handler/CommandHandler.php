@@ -140,12 +140,26 @@ class CommandHandler
             return;
         }
 
-        $city = $this->cityRepo->findByName($cityName);
+        $matches = $this->cityRepo->findAllByExactName($cityName);
 
-        if (!$city) {
-            $city = $this->cityRepo->findCapitalByProvinceName($cityName);
+        if (count($matches) === 1) {
+            $this->api->sendMessage(
+                $update->getChatId(),
+                $this->prayerTime->getForCity($matches[0])
+            );
+            return;
         }
 
+        if (count($matches) > 1) {
+            $this->api->sendMessage(
+                $update->getChatId(),
+                "🔍 چند شهر با نام «{$cityName}» پیدا شد:\nیکی رو انتخاب کن 👇",
+                ['reply_markup' => ['inline_keyboard' => $this->buildCityKeyboard($matches)]]
+            );
+            return;
+        }
+
+        $city = $this->cityRepo->findCapitalByProvinceName($cityName);
         if ($city) {
             $this->api->sendMessage(
                 $update->getChatId(),
@@ -167,11 +181,22 @@ class CommandHandler
             fn($c) => "• <code>/ow {$c['name']}</code> ({$c['province_name']})",
             $results
         );
-
         $this->api->sendMessage(
             $update->getChatId(),
             "🔍 منظورت اینه؟\n\n" . implode("\n", $suggestions)
         );
+    }
+
+    private function buildCityKeyboard(array $cities): array
+    {
+        $buttons = [];
+        foreach ($cities as $city) {
+            $label     = $city['province_name']
+                ? "{$city['name']} — {$city['province_name']}"
+                : $city['name'];
+            $buttons[] = ['text' => $label, 'callback_data' => "ow:{$city['id']}"];
+        }
+        return array_chunk($buttons, 2); // هر ردیف ۲ دکمه
     }
 
     // ─── موقعیت مکانی ────────────────────────────────────────────

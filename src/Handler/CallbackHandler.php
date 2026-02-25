@@ -5,12 +5,16 @@ namespace App\Handler;
 use App\Telegram\Api;
 use App\Telegram\Update;
 use App\Service\CalendarService;
+use App\Service\PrayerTimeService;
+use App\Repository\CityRepository;
 
 class CallbackHandler
 {
     public function __construct(
-        private Api $api,
-        private CalendarService $calendar
+        private Api               $api,
+        private CalendarService   $calendar,
+        private CityRepository    $cityRepo,
+        private PrayerTimeService $prayerTime
     ) {}
 
     public function handle(Update $update): void
@@ -21,6 +25,20 @@ class CallbackHandler
         $msgId  = $update->getCallbackMessageId();
 
         if (!$cbId || !$chatId || !$msgId) return;
+
+        if (preg_match('/^ow:(\d+)$/', $data, $m)) {
+            $city = $this->cityRepo->findById((int)$m[1]);
+            if ($city) {
+                $this->api->editMessageText(
+                    $chatId, $msgId,
+                    $this->prayerTime->getForCity($city)
+                );
+                $this->api->answerCallbackQuery($cbId);
+            } else {
+                $this->api->answerCallbackQuery($cbId, '❌ شهر پیدا نشد.', true);
+            }
+            return;
+        }
 
         if (preg_match('/^cal:(\d{4}):(\d{1,2})$/', $data, $m)) {
             $view = $this->calendar->renderMonth((int)$m[1], (int)$m[2]);
@@ -41,14 +59,9 @@ class CallbackHandler
         }
 
         if (preg_match('/^calday:(\d{4}):(\d{1,2}):(\d{1,2})$/', $data, $m)) {
-            $jy = (int)$m[1];
-            $jm = (int)$m[2];
-            $jd = (int)$m[3];
-
-            $view = $this->calendar->renderDayView($jy, $jm, $jd);
-
+            $view = $this->calendar->renderDayView((int)$m[1], (int)$m[2], (int)$m[3]);
             $this->api->editMessageText($chatId, $msgId, $view['text'], [
-                'reply_markup' => $view['reply_markup'],   // همون کیبورد، بدون تغییر
+                'reply_markup' => $view['reply_markup'],
             ]);
             $this->api->answerCallbackQuery($cbId);
             return;

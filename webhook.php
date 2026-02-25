@@ -44,7 +44,7 @@ try {
     }
 
     if ($update->isCallbackQuery()) {
-        (new CallbackHandler($api, $calendar))->handle($update);
+        (new CallbackHandler($api, $calendar, new CityRepository($db), $prayerTime))->handle($update);
         exit;
     }
 

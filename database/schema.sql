@@ -1,22 +1,9 @@
-CREATE TABLE provinces (
-    id      SMALLINT UNSIGNED NOT NULL,
-    name    VARCHAR(100)      NOT NULL,
-    capital VARCHAR(100)      NOT NULL,
-    code    VARCHAR(5)        NOT NULL,
-    PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE cities (
-    id          SMALLINT UNSIGNED NOT NULL,
-    name        VARCHAR(100)      NOT NULL,
-    province_id SMALLINT UNSIGNED NOT NULL,
-    latitude    DECIMAL(12,8)     NOT NULL,
-    longitude   DECIMAL(12,8)     NOT NULL,
-    PRIMARY KEY (id),
-    KEY idx_name        (name),
-    KEY idx_province_id (province_id),
-    CONSTRAINT fk_city_province FOREIGN KEY (province_id) REFERENCES provinces(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `provinces` (
+ `id` tinyint(3) unsigned NOT NULL,
+ `name_fa` varchar(100) DEFAULT NULL,
+ `name_en` varchar(100) DEFAULT NULL,
+ PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 
 CREATE TABLE users (
     id         BIGINT UNSIGNED  NOT NULL  COMMENT 'Telegram user_id',
@@ -45,17 +32,17 @@ CREATE TABLE `calendar_events` (
   INDEX `idx_type`    (`type`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE cities (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    province_id SMALLINT UNSIGNED NOT NULL,
-    district_id SMALLINT UNSIGNED NULL,
-    latitude DECIMAL(10,7) NOT NULL,
-    longitude DECIMAL(10,7) NOT NULL,
-    PRIMARY KEY (id),
-    KEY idx_name (name),
-    KEY idx_province_id (province_id),
-    KEY idx_district_id (district_id),
-    CONSTRAINT fk_cities_province FOREIGN KEY (province_id) REFERENCES provinces(id),
-    CONSTRAINT fk_cities_district FOREIGN KEY (district_id) REFERENCES districts(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE `cities` (
+ `id` mediumint(8) unsigned NOT NULL,
+ `p_id` tinyint(3) unsigned NOT NULL,
+ `name_fa` varchar(100) NOT NULL,
+ `name_normalized` varchar(100) DEFAULT NULL,
+ `name_en` varchar(100) DEFAULT NULL,
+ `lat` decimal(9,6) DEFAULT NULL,
+ `lon` decimal(9,6) DEFAULT NULL,
+ `is_capital` tinyint(1) NOT NULL DEFAULT 0,
+ PRIMARY KEY (`id`),
+ KEY `idx_province_id` (`p_id`),
+ KEY `idx_name_normalized` (`name_normalized`),
+ CONSTRAINT `fk_city_province` FOREIGN KEY (`p_id`) REFERENCES `provinces` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
