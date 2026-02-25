@@ -20,6 +20,7 @@ class GeoService
             'format'          => 'json',
             'accept-language' => 'fa',
             'zoom'            => 10,
+            'extratags'       => 1,
         ]);
 
         $json = $this->fetch($url);
@@ -36,6 +37,7 @@ class GeoService
             'state'        => $addr['state']    ?? $addr['province'] ?? null,
             'country'      => $addr['country']  ?? null,
             'country_code' => strtolower($addr['country_code'] ?? ''),
+            'timezone'     => $data['extratags']['timezone'] ?? null,
         ];
     }
 

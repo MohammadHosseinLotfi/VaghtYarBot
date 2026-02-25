@@ -1,8 +1,10 @@
 CREATE TABLE `provinces` (
  `id` tinyint(3) unsigned NOT NULL,
  `name_fa` varchar(100) DEFAULT NULL,
+ `name_normalized` varchar(100) DEFAULT NULL,
  `name_en` varchar(100) DEFAULT NULL,
- PRIMARY KEY (`id`)
+ PRIMARY KEY (`id`),
+ KEY `idx_prov_name_normalized` (`name_normalized`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 
 CREATE TABLE users (

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Feb 25, 2026 at 03:24 PM
+-- Generation Time: Feb 25, 2026 at 06:18 PM
 -- Server version: 10.6.24-MariaDB
 -- PHP Version: 8.4.14
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `VaghtYarBot`
+-- Database: `stockifa_VaghtYarBot`
 --
 
 -- --------------------------------------------------------
@@ -2259,6 +2259,7 @@ INSERT INTO `cities` (`id`, `p_id`, `name_fa`, `name_normalized`, `name_en`, `la
 CREATE TABLE `provinces` (
   `id` tinyint(3) UNSIGNED NOT NULL,
   `name_fa` varchar(100) DEFAULT NULL,
+  `name_normalized` varchar(100) DEFAULT NULL,
   `name_en` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -2266,38 +2267,38 @@ CREATE TABLE `provinces` (
 -- Dumping data for table `provinces`
 --
 
-INSERT INTO `provinces` (`id`, `name_fa`, `name_en`) VALUES
-(1, 'آذربایجان شرقی', 'East Azerbaijan'),
-(2, 'آذربایجان غربی', 'West Azerbaijan'),
-(3, 'اردبیل', 'Ardabil'),
-(4, 'اصفهان', 'Isfahan'),
-(5, 'ایلام', 'Ilam'),
-(6, 'بوشهر', 'Bushehr'),
-(7, 'تهران', 'Tehran'),
-(8, 'چهارمحال و بختیاری', 'Chaharmahal and Bakhtiari'),
-(9, 'خراسان جنوبی', 'South Khorasan'),
-(10, 'خراسان رضوی', 'Razavi Khorasan'),
-(11, 'خراسان شمالی', 'North Khorasan'),
-(12, 'خوزستان', 'Khuzestan'),
-(13, 'زنجان', 'Zanjan'),
-(14, 'سمنان', 'Semnan'),
-(15, 'سیستان و بلوچستان', 'Sistan and Baluchestan'),
-(16, 'فارس', 'Fars'),
-(17, 'قزوین', 'Qazvin'),
-(18, 'قم', 'Qom'),
-(19, 'کردستان', 'Kurdistan'),
-(20, 'کرمان', 'Kerman'),
-(21, 'کرمانشاه', 'Kermanshah'),
-(22, 'کهگیلویه و بویراحمد', 'Kohgiluyeh and Boyer-Ahmad '),
-(23, 'گلستان', 'Golestan'),
-(24, 'گیلان', 'Gilan'),
-(25, 'لرستان', 'Lorestan'),
-(26, 'مازندران', 'Mazandaran'),
-(27, 'مرکزی', 'Markazi'),
-(28, 'هرمزگان', 'Hormozgan'),
-(29, 'همدان', 'Hamadan'),
-(30, 'یزد', 'Yazd'),
-(31, 'البرز', 'Alborz');
+INSERT INTO `provinces` (`id`, `name_fa`, `name_normalized`, `name_en`) VALUES
+(1, 'آذربایجان شرقی', 'اذربایجان شرقی', 'East Azerbaijan'),
+(2, 'آذربایجان غربی', 'اذربایجان غربی', 'West Azerbaijan'),
+(3, 'اردبیل', 'اردبیل', 'Ardabil'),
+(4, 'اصفهان', 'اصفهان', 'Isfahan'),
+(5, 'ایلام', 'ایلام', 'Ilam'),
+(6, 'بوشهر', 'بوشهر', 'Bushehr'),
+(7, 'تهران', 'تهران', 'Tehran'),
+(8, 'چهارمحال و بختیاری', 'چهارمحال و بختیاری', 'Chaharmahal and Bakhtiari'),
+(9, 'خراسان جنوبی', 'خراسان جنوبی', 'South Khorasan'),
+(10, 'خراسان رضوی', 'خراسان رضوی', 'Razavi Khorasan'),
+(11, 'خراسان شمالی', 'خراسان شمالی', 'North Khorasan'),
+(12, 'خوزستان', 'خوزستان', 'Khuzestan'),
+(13, 'زنجان', 'زنجان', 'Zanjan'),
+(14, 'سمنان', 'سمنان', 'Semnan'),
+(15, 'سیستان و بلوچستان', 'سیستان و بلوچستان', 'Sistan and Baluchestan'),
+(16, 'فارس', 'فارس', 'Fars'),
+(17, 'قزوین', 'قزوین', 'Qazvin'),
+(18, 'قم', 'قم', 'Qom'),
+(19, 'کردستان', 'کردستان', 'Kurdistan'),
+(20, 'کرمان', 'کرمان', 'Kerman'),
+(21, 'کرمانشاه', 'کرمانشاه', 'Kermanshah'),
+(22, 'کهگیلویه و بویراحمد', 'کهگیلویه و بویراحمد', 'Kohgiluyeh and Boyer-Ahmad '),
+(23, 'گلستان', 'گلستان', 'Golestan'),
+(24, 'گیلان', 'گیلان', 'Gilan'),
+(25, 'لرستان', 'لرستان', 'Lorestan'),
+(26, 'مازندران', 'مازندران', 'Mazandaran'),
+(27, 'مرکزی', 'مرکزی', 'Markazi'),
+(28, 'هرمزگان', 'هرمزگان', 'Hormozgan'),
+(29, 'همدان', 'همدان', 'Hamadan'),
+(30, 'یزد', 'یزد', 'Yazd'),
+(31, 'البرز', 'البرز', 'Alborz');
 
 -- --------------------------------------------------------
 
@@ -2336,7 +2337,8 @@ ALTER TABLE `cities`
 -- Indexes for table `provinces`
 --
 ALTER TABLE `provinces`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_prov_name_normalized` (`name_normalized`);
 
 --
 -- Indexes for table `users`

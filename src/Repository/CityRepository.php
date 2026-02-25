@@ -28,14 +28,14 @@ class CityRepository
     {
         $stmt = $this->db->prepare("
             SELECT c.id,
-                   c.name_fa                 AS name,
-                   c.name_en,
-                   c.lat                     AS latitude,
-                   c.lon                     AS longitude,
-                   COALESCE(p.name_fa, '')   AS province_name
-            FROM   cities     c
+                c.name_fa                AS name,
+                c.name_en,
+                c.lat                    AS latitude,
+                c.lon                    AS longitude,
+                COALESCE(p.name_fa, '') AS province_name
+            FROM   cities    c
             LEFT JOIN provinces p ON p.id = c.p_id
-            WHERE  c.name_fa = ?
+            WHERE  c.name_normalized = ?
             LIMIT  10
         ");
         $stmt->execute([$this->normalize($name)]);
@@ -65,15 +65,15 @@ class CityRepository
         $keyword = '%' . $this->normalize($name) . '%';
         $stmt = $this->db->prepare("
             SELECT c.id,
-                   c.name_fa                 AS name,
-                   c.name_en,
-                   c.lat                     AS latitude,
-                   c.lon                     AS longitude,
-                   COALESCE(p.name_fa, '')   AS province_name
-            FROM   cities     c
+                c.name_fa                AS name,
+                c.name_en,
+                c.lat                    AS latitude,
+                c.lon                    AS longitude,
+                COALESCE(p.name_fa, '') AS province_name
+            FROM   cities    c
             LEFT JOIN provinces p ON p.id = c.p_id
-            WHERE  c.name_fa LIKE ?
-               OR  c.name_en LIKE ?
+            WHERE  c.name_normalized LIKE ?
+            OR  c.name_en        LIKE ?
             LIMIT  8
         ");
         $stmt->execute([$keyword, $keyword]);
@@ -84,15 +84,15 @@ class CityRepository
     {
         $stmt = $this->db->prepare("
             SELECT c.id,
-                   c.name_fa   AS name,
-                   c.name_en,
-                   c.lat       AS latitude,
-                   c.lon       AS longitude,
-                   p.name_fa   AS province_name
+                c.name_fa  AS name,
+                c.name_en,
+                c.lat      AS latitude,
+                c.lon      AS longitude,
+                p.name_fa  AS province_name
             FROM   cities    c
             JOIN   provinces p ON p.id = c.p_id
-            WHERE  p.name_fa    = ?
-              AND  c.is_capital = 1
+            WHERE  p.name_normalized = ?
+            AND  c.is_capital = 1
             LIMIT  1
         ");
         $stmt->execute([$this->normalize($name)]);
@@ -128,6 +128,7 @@ class CityRepository
     {
         $s = str_replace("\u{200C}", ' ', $s);
         $s = strtr($s, [
+            'آ' => 'ا', 'أ' => 'ا', 'إ' => 'ا',
             'ي' => 'ی', 'ى' => 'ی',
             'ك' => 'ک',
             'ة' => 'ه',
