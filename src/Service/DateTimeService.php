@@ -28,17 +28,15 @@ class DateTimeService
         require_once __DIR__ . '/../../lib/jdf.php';
     }
 
-    public function getNow(): array
+    private function getDateArray(int $ts): array
     {
-        $ts = time();
-
         $persian = IntlCalendar::createInstance(
             new DateTimeZone('Asia/Tehran'),
             'fa_IR@calendar=persian'
         );
         $persian->setTime($ts * 1000);
         $jYear  = (int) $persian->get(IntlCalendar::FIELD_YEAR);
-        $jMonth = (int) $persian->get(IntlCalendar::FIELD_MONTH) + 1; // 0-indexed
+        $jMonth = (int) $persian->get(IntlCalendar::FIELD_MONTH) + 1;
         $jDay   = (int) $persian->get(IntlCalendar::FIELD_DAY_OF_MONTH);
 
         $formatted = jdate('l، j F Y', $ts);
@@ -68,6 +66,31 @@ class DateTimeService
             'h_day'        => $hDay,
             'h_month_name' => self::HIJRI_MONTHS[$hMonth] ?? (string) $hMonth,
         ];
+    }
+
+    public function getNow(): array
+    {
+        return $this->getDateArray(time());
+    }
+
+    /**
+     * offset به ثانیه — مثبت = آینده، منفی = گذشته
+     * مثال: getByOffset(2 * 86400)  →  ۲ روز بعد
+     *        getByOffset(-7 * 86400) →  ۷ روز قبل
+     */
+    public function getByOffset(int $offsetSeconds): array
+    {
+        return $this->getDateArray(time() + $offsetSeconds);
+    }
+
+    public function getTomorrow(): array
+    {
+        return $this->getDateArray(time() + 86400);
+    }
+
+    public function getYesterday(): array
+    {
+        return $this->getDateArray(time() - 86400);
     }
 
     private function getHijriDate(int $ts): array
