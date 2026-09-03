@@ -151,16 +151,8 @@ class PrayerTimeService
 
     private function isRamadan(): bool
     {
-        if (!class_exists(IntlCalendar::class)) return false;
-
-        $cal = IntlCalendar::createInstance(
-            new DateTimeZone('Asia/Tehran'),
-            'fa_IR@calendar=islamic-civil'
-        );
-        $cal->setTime((int)(microtime(true) * 1000));
-
-        // FIELD_MONTH صفر-پایه است: 0=محرم ... 8=رمضان
-        return $cal->get(IntlCalendar::FIELD_MONTH) === 8;
+        [, $hMonth] = HijriCalendar::fromTimestamp(time());
+        return $hMonth === 9;
     }
 
     private function timeToMinutes(string $time): int

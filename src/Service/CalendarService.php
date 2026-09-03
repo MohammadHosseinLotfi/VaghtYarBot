@@ -128,19 +128,9 @@ class CalendarService
         $persian->set(IntlCalendar::FIELD_YEAR,         $jy);
         $persian->set(IntlCalendar::FIELD_MONTH,        $jm - 1);
         $persian->set(IntlCalendar::FIELD_DAY_OF_MONTH, $jd);
-        $ts = $persian->getTime();
+        $ts = (int) ($persian->getTime() / 1000);
 
-        $hijri = IntlCalendar::createInstance(
-            new DateTimeZone('Asia/Tehran'),
-            'fa_IR@calendar=islamic-civil'
-        );
-        $hijri->setTime($ts);
-
-        return [
-            (int) $hijri->get(IntlCalendar::FIELD_YEAR),
-            (int) $hijri->get(IntlCalendar::FIELD_MONTH) + 1, // 0-indexed
-            (int) $hijri->get(IntlCalendar::FIELD_DAY_OF_MONTH),
-        ];
+        return HijriCalendar::fromTimestamp($ts);
     }
 
     private function buildKeyboard(int $jy, int $jm): array
@@ -156,6 +146,7 @@ class CalendarService
 
         $keyboard[] = [['text' => "📅 {$monthName} {$jy}", 'callback_data' => 'noop']];
 
+        // تلگرام ردیف را LTR می‌چیند؛ معکوس می‌کنیم تا شنبه سمت راست باشد.
         $keyboard[] = array_reverse(array_map(
             fn($w) => ['text' => $w, 'callback_data' => 'noop'],
             self::WEEKDAYS
@@ -193,9 +184,9 @@ class CalendarService
         [$ny, $nm] = $this->nextMonth($jy, $jm);
 
         $keyboard[] = [
-            ['text' => 'ماه بعد ◀', 'callback_data' => "cal:{$ny}:{$nm}"],
+            ['text' => 'ماه بعد ▶', 'callback_data' => "cal:{$ny}:{$nm}"],
             ['text' => '📅 امروز',   'callback_data' => 'cal:today', 'style' => 'primary'],
-            ['text' => '▶ ماه قبل', 'callback_data' => "cal:{$py}:{$pm}"],
+            ['text' => '◀ ماه قبل', 'callback_data' => "cal:{$py}:{$pm}"],
         ];
 
         return $keyboard;

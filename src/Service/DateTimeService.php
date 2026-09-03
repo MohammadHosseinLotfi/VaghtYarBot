@@ -95,18 +95,6 @@ class DateTimeService
 
     private function getHijriDate(int $ts): array
     {
-        if (!class_exists(IntlCalendar::class)) {
-            return [0, 0, 0];
-        }
-        $cal = IntlCalendar::createInstance(
-            new DateTimeZone('Asia/Tehran'),
-            'fa_IR@calendar=islamic-civil'
-        );
-        $cal->setTime($ts * 1000);
-        return [
-            (int) $cal->get(IntlCalendar::FIELD_YEAR),
-            (int) $cal->get(IntlCalendar::FIELD_MONTH) + 1, // 0-indexed
-            (int) $cal->get(IntlCalendar::FIELD_DAY_OF_MONTH),
-        ];
+        return HijriCalendar::fromTimestamp($ts);
     }
 }
