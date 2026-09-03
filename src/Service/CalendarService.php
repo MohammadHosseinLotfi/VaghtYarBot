@@ -150,19 +150,17 @@ class CalendarService
         $daysInMonth = $this->jalaliDaysInMonth($jy, $jm);
         $firstDowIdx = $this->jalaliFirstDayOfMonthWeekIndex($jy, $jm);
         $monthName   = self::MONTHS[$jm] ?? (string)$jm;
+        $holidays    = $this->holidayDaysInMonth($jy, $jm);
 
         $keyboard = [];
 
-        // ردیف ۱ — عنوان ماه
         $keyboard[] = [['text' => "📅 {$monthName} {$jy}", 'callback_data' => 'noop']];
 
-        // ردیف ۲ — نام روزهای هفته
-        $keyboard[] = array_map(
+        $keyboard[] = array_reverse(array_map(
             fn($w) => ['text' => $w, 'callback_data' => 'noop'],
             self::WEEKDAYS
-        );
+        ));
 
-        // ردیف‌های روزها
         $day = 1;
         for ($row = 0; $row < 6; $row++) {
             if ($day > $daysInMonth) break;
@@ -173,28 +171,63 @@ class CalendarService
                     $buttons[] = ['text' => ' ', 'callback_data' => 'noop'];
                 } else {
                     $isToday   = ($todayDay !== null && $day === $todayDay);
-                    $label     = $isToday ? "[{$day}]" : (string)$day;
-                    $buttons[] = [
-                        'text'          => $label,
+                    $isFriday  = ($col === 6);
+                    $isHoliday = $isFriday || !empty($holidays[$day]);
+                    $btn = [
+                        'text'          => $isToday ? "[{$day}]" : (string) $day,
                         'callback_data' => "calday:{$jy}:{$jm}:{$day}",
                     ];
+                    if ($isHoliday) {
+                        $btn['style'] = 'danger';
+                    } elseif ($isToday) {
+                        $btn['style'] = 'primary';
+                    }
+                    $buttons[] = $btn;
                     $day++;
                 }
             }
-            $keyboard[] = $buttons;
+            $keyboard[] = array_reverse($buttons);
         }
 
-        // ردیف آخر — ناوبری
         [$py, $pm] = $this->prevMonth($jy, $jm);
         [$ny, $nm] = $this->nextMonth($jy, $jm);
 
         $keyboard[] = [
-            ['text' => '◀ ماه قبل', 'callback_data' => "cal:{$py}:{$pm}"],
-            ['text' => '📅 امروز',   'callback_data' => 'cal:today'],
-            ['text' => 'ماه بعد ▶', 'callback_data' => "cal:{$ny}:{$nm}"],
+            ['text' => 'ماه بعد ◀', 'callback_data' => "cal:{$ny}:{$nm}"],
+            ['text' => '📅 امروز',   'callback_data' => 'cal:today', 'style' => 'primary'],
+            ['text' => '▶ ماه قبل', 'callback_data' => "cal:{$py}:{$pm}"],
         ];
 
         return $keyboard;
+    }
+
+    /** @return array<int, true> */
+    private function holidayDaysInMonth(int $jy, int $jm): array
+    {
+        $daysInMonth = $this->jalaliDaysInMonth($jy, $jm);
+        $hijriByMonth = [];
+        $dayToHijri   = [];
+
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            [, $hm, $hd] = $this->jalaliToHijri($jy, $jm, $d);
+            $dayToHijri[$d] = [$hm, $hd];
+            $hijriByMonth[$hm][] = $hd;
+        }
+
+        $flags = $this->eventRepo->findHolidays($jm, $hijriByMonth);
+        $out   = [];
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            if (!empty($flags['persian'][$d])) {
+                $out[$d] = true;
+                continue;
+            }
+            [$hm, $hd] = $dayToHijri[$d];
+            if (!empty($flags['hijri'][$hm][$hd])) {
+                $out[$d] = true;
+            }
+        }
+
+        return $out;
     }
 
     public function getTodayJalali(): array
