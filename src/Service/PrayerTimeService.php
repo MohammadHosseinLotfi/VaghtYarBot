@@ -32,22 +32,25 @@ class PrayerTimeService
 
     public function getForCity(array $city): string
     {
-        $tzName = $city['timezone'] ?? 'Asia/Tehran';
+        $times = $this->computeTimes(
+            (float) $city['latitude'],
+            (float) $city['longitude'],
+            $city['timezone'] ?? 'Asia/Tehran'
+        );
+        return $this->format($city, $times);
+    }
+
+    public function computeTimes(float $lat, float $lng, string $tzName = 'Asia/Tehran'): array
+    {
         $tz = new \DateTimeZone($tzName);
 
-        // تاریخ "امروز" در timezone همان شهر/موقعیت
-        $now = new \DateTimeImmutable('now', $tz);
+        $now  = new \DateTimeImmutable('now', $tz);
         $date = $now->format('Y-m-d');
 
-        // Offset فعلی (ساعت)
-        $currentOffsetHours = $tz->getOffset($now) / 3600;
-
-        // Offset استاندارد (زمستان/بدون DST) با گرفتن یک تاریخ وسط ژانویه
-        $jan = new \DateTimeImmutable($now->format('Y') . '-01-15 12:00:00', $tz);
+        $currentOffsetHours  = $tz->getOffset($now) / 3600;
+        $jan                 = new \DateTimeImmutable($now->format('Y') . '-01-15 12:00:00', $tz);
         $standardOffsetHours = $tz->getOffset($jan) / 3600;
-
-        // DST اگر Offset فعلی از Offset استاندارد بیشتر بود
-        $dst = ($currentOffsetHours > $standardOffsetHours) ? 1 : 0;
+        $dst                 = ($currentOffsetHours > $standardOffsetHours) ? 1 : 0;
 
         $calc = new \PrayerTimesCalculator(
             method:        'Tehran',
@@ -55,15 +58,13 @@ class PrayerTimeService
             iterations:    1
         );
 
-        $times = $calc->getTimesSimple(
+        return $calc->getTimesSimple(
             date:     $date,
-            coords:   [(float)$city['latitude'], (float)$city['longitude']],
+            coords:   [$lat, $lng],
             timezone: $standardOffsetHours,
             dst:      $dst,
             format:   '24h'
         );
-
-        return $this->format($city, $times);
     }
 
     private function format(array $city, array $times): string

@@ -23,12 +23,12 @@ class Update
 
     public function getCommandArg(string $cmd): string
     {
-        $text   = trim($this->getText());
-        $prefix = "/{$cmd} ";
-        if (str_starts_with($text, $prefix)) {
-            return trim(substr($text, strlen($prefix)));
+        $text = trim($this->getText());
+        $cmd  = preg_quote($cmd, '/');
+        if (!preg_match('/^\/' . $cmd . '(?:@\S+)?(?:\s+(.*))?$/us', $text, $m)) {
+            return '';
         }
-        return '';
+        return trim($m[1] ?? '');
     }
 
     public function isGroup(): bool
@@ -73,5 +73,10 @@ class Update
     public function getCallbackMessageId(): ?int
     {
         return $this->data['callback_query']['message']['message_id'] ?? null;
+    }
+
+    public function getCallbackUserId(): ?int
+    {
+        return $this->data['callback_query']['from']['id'] ?? null;
     }
 }

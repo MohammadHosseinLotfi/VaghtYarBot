@@ -11,25 +11,35 @@ class Api
         $this->baseUrl = "https://api.telegram.org/bot" . $_ENV['BOT_TOKEN'] . "/";
     }
 
-    public function sendMessage(int|string $chatId, string $text, array $options = []): void
+    public function sendChatAction(int|string $chatId, string $action = 'typing'): void
     {
-        $this->request('sendMessage', array_merge([
+        $this->request('sendChatAction', [
+            'chat_id' => $chatId,
+            'action'  => $action,
+        ]);
+    }
+
+    public function sendMessage(int|string $chatId, string $text, array $options = []): bool
+    {
+        $res = $this->request('sendMessage', array_merge([
             'chat_id'    => $chatId,
             'text'       => $text,
             'parse_mode' => 'HTML',
         ], $options));
+        return !empty($res['ok']);
     }
 
     public function sendReplyKeyboard(
         int|string $chatId,
         string     $text,
-        array      $keyboard
-    ): void {
-        $this->sendMessage($chatId, $text, [
+        array      $keyboard,
+        bool       $persistent = false
+    ): bool {
+        return $this->sendMessage($chatId, $text, [
             'reply_markup' => [
                 'keyboard'          => $keyboard,
                 'resize_keyboard'   => true,
-                'one_time_keyboard' => true,
+                'one_time_keyboard' => !$persistent,
             ],
         ]);
     }
