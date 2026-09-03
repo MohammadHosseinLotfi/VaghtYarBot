@@ -15,6 +15,7 @@ use App\Service\CalendarService;
 use App\Service\GeoService;
 use App\Service\NowruzService;
 use App\Service\NotifyService;
+use App\Service\DateConvertService;
 
 class CommandHandler
 {
@@ -30,7 +31,8 @@ class CommandHandler
         private NowruzService      $nowruzService,
         private LocationRepository $locationRepo,
         private NotifyRepository   $notifyRepo,
-        private NotifyService      $notifyService
+        private NotifyService      $notifyService,
+        private DateConvertService $dateConvert
     ) {}
 
     public function handle(Update $update): void
@@ -70,6 +72,10 @@ class CommandHandler
             $this->handleCal($update);
         } elseif ($update->isCommand('nowruz') || $text === '🌸 نوروز' || $text === 'نوروز') {
             $this->handleNowruz($update);
+        } elseif ($update->isCommand('conv')) {
+            $this->handleConvert($update, $update->getCommandArg('conv'));
+        } elseif (($converted = $this->dateConvert->tryConvert($text)) !== null) {
+            $this->api->sendMessage($update->getChatId(), $converted);
         } elseif ($this->parseDateOffset($text, $offset, $label)) {
             $this->handleDateOffset($update, $offset, $label);
         }
@@ -103,6 +109,7 @@ class CommandHandler
               . "• <code>/ow نام شهر</code> — اوقات شرعی (مثلاً <code>/ow کاشان</code>)\n"
               . "• <code>/notify</code> — اعلان اذان شهر ذخیره‌شده\n"
               . "• <code>/cal</code> — تقویم شمسی\n"
+              . "• <code>/conv تاریخ</code> — تبدیل شمسی/میلادی (مثلاً <code>/conv 1405/6/8</code>)\n"
               . "• <code>/nowruz</code> — لحظه تحویل سال + شمارش معکوس 🌸\n"
               . "• موقعیت مکانیت رو مستقیم ارسال کن 📍"
             : "سلام دوباره <b>{$name}</b>! 😊\n\n"
@@ -110,6 +117,7 @@ class CommandHandler
               . "• <code>/ow نام شهر</code> — اوقات شرعی (مثلاً <code>/ow کاشان</code>)\n"
               . "• <code>/notify</code> — اعلان اذان شهر ذخیره‌شده\n"
               . "• <code>/cal</code> — تقویم شمسی\n"
+              . "• <code>/conv تاریخ</code> — تبدیل شمسی/میلادی (مثلاً <code>/conv 1405/6/8</code>)\n"
               . "• <code>/nowruz</code> — لحظه تحویل سال + شمارش معکوس 🌸\n"
               . "• <code>/nowruz 1406</code> — تحویل سال دلخواه\n";
 
@@ -493,5 +501,25 @@ class CommandHandler
             $this->notifyService->settingsText($this->locationRepo->label($location)),
             ['reply_markup' => $this->notifyService->settingsMarkup($settings)]
         );
+    }
+
+    private function handleConvert(Update $update, string $arg): void
+    {
+        $arg = trim($arg);
+        if ($arg === '') {
+            $this->api->sendMessage($update->getChatId(), $this->dateConvert->helpText());
+            return;
+        }
+
+        $converted = $this->dateConvert->tryConvert($arg);
+        if ($converted === null) {
+            $this->api->sendMessage(
+                $update->getChatId(),
+                "❌ تاریخ معتبر نیست.\n\n" . $this->dateConvert->helpText()
+            );
+            return;
+        }
+
+        $this->api->sendMessage($update->getChatId(), $converted);
     }
 }

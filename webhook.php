@@ -14,6 +14,7 @@ use App\Service\CalendarService;
 use App\Service\GeoService;
 use App\Service\NowruzService;
 use App\Service\NotifyService;
+use App\Service\DateConvertService;
 use App\Handler\CommandHandler;
 use App\Handler\CallbackHandler;
 
@@ -41,6 +42,7 @@ try {
     $calendar     = new CalendarService($eventRepo);
     $nowruz       = new NowruzService();
     $notifySvc    = new NotifyService($notifyRepo, $locationRepo);
+    $dateConvert  = new DateConvertService($eventRepo);
 
     if ($update->getMessage()) {
         $handler = new CommandHandler(
@@ -55,7 +57,8 @@ try {
             $nowruz,
             $locationRepo,
             $notifyRepo,
-            $notifySvc
+            $notifySvc,
+            $dateConvert
         );
         $handler->handle($update);
         exit;
