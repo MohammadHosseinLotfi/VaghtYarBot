@@ -111,6 +111,15 @@ class CallbackHandler
             return;
         }
 
+        if (preg_match('/^hol:(\d{4}):(\d{1,2})$/', $data, $m)) {
+            $view = $this->calendar->renderHolidaysMonth((int) $m[1], (int) $m[2]);
+            $this->api->editMessageText($chatId, $msgId, $view['text'], [
+                'reply_markup' => $view['reply_markup'],
+            ]);
+            $this->api->answerCallbackQuery($cbId);
+            return;
+        }
+
         $this->api->answerCallbackQuery($cbId);
     }
 

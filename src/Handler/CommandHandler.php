@@ -70,6 +70,8 @@ class CommandHandler
             $this->handleNotify($update, $arg);
         } elseif ($update->isCommand('cal') || $text === '🗓 تقویم' || $text === 'تقویم') {
             $this->handleCal($update);
+        } elseif ($update->isCommand('holidays') || $text === '🔴 تعطیل‌ها' || $text === 'تعطیل‌ها' || $text === 'تعطیلی‌های ماه') {
+            $this->handleHolidays($update);
         } elseif ($update->isCommand('nowruz') || $text === '🌸 نوروز' || $text === 'نوروز') {
             $this->handleNowruz($update);
         } elseif ($update->isCommand('conv')) {
@@ -85,9 +87,9 @@ class CommandHandler
     {
         return [
             [['text' => '📅 امروز'], ['text' => '🕌 اوقات شرعی']],
-            [['text' => '🗓 تقویم'], ['text' => '🌸 نوروز']],
+            [['text' => '🗓 تقویم'], ['text' => '🔴 تعطیل‌ها']],
+            [['text' => '🌸 نوروز'], ['text' => '🔔 اعلان‌ها']],
             [
-                ['text' => '🔔 اعلان‌ها'],
                 ['text' => '📍 موقعیت', 'request_location' => true],
             ],
         ];
@@ -392,6 +394,14 @@ class CommandHandler
     private function handleCal(Update $update): void
     {
         $view = $this->calendar->renderCurrentMonth();
+        $this->api->sendMessage($update->getChatId(), $view['text'], [
+            'reply_markup' => $view['reply_markup'],
+        ]);
+    }
+
+    private function handleHolidays(Update $update): void
+    {
+        $view = $this->calendar->renderCurrentHolidaysMonth();
         $this->api->sendMessage($update->getChatId(), $view['text'], [
             'reply_markup' => $view['reply_markup'],
         ]);

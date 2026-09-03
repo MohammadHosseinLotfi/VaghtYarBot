@@ -184,12 +184,71 @@ class CalendarService
         [$ny, $nm] = $this->nextMonth($jy, $jm);
 
         $keyboard[] = [
-            ['text' => 'ماه بعد ▶', 'callback_data' => "cal:{$ny}:{$nm}"],
+            ['text' => '◀ ماه بعد', 'callback_data' => "cal:{$ny}:{$nm}"],
             ['text' => '📅 امروز',   'callback_data' => 'cal:today', 'style' => 'primary'],
-            ['text' => '◀ ماه قبل', 'callback_data' => "cal:{$py}:{$pm}"],
+            ['text' => 'ماه قبل ▶', 'callback_data' => "cal:{$py}:{$pm}"],
         ];
+        $keyboard[] = [[
+            'text'          => '🔴 تعطیل‌های این ماه',
+            'callback_data' => "hol:{$jy}:{$jm}",
+            'style'         => 'danger',
+        ]];
 
         return $keyboard;
+    }
+
+    public function renderHolidaysMonth(int $jy, int $jm): array
+    {
+        $monthName   = self::MONTHS[$jm] ?? (string) $jm;
+        $daysInMonth = $this->jalaliDaysInMonth($jy, $jm);
+        $lines       = [];
+
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $weekday  = $this->getWeekdayName($jy, $jm, $d);
+            $isFriday = ($weekday === 'جمعه');
+            [, $hm, $hd] = $this->jalaliToHijri($jy, $jm, $d);
+            $events = $this->eventRepo->getTodayEvents($jm, $d, $hm, $hd);
+            $titles = [];
+            foreach ($events as $e) {
+                if (empty($e['holiday'])) {
+                    continue;
+                }
+                $titles[] = htmlspecialchars($e['title'], ENT_QUOTES, 'UTF-8');
+            }
+
+            if (!$isFriday && $titles === []) {
+                continue;
+            }
+
+            $line = "{$d} ام روز {$weekday}";
+            if ($titles !== []) {
+                $line .= ' | ' . implode(' — ', $titles);
+            }
+            $lines[] = $line;
+        }
+
+        $text = "🔴 <b>تعطیل‌های {$monthName} {$jy}</b>\n\n";
+        $text .= $lines === [] ? 'در این ماه تعطیلی ثبت نشده.' : implode("\n", $lines);
+
+        [$py, $pm] = $this->prevMonth($jy, $jm);
+        [$ny, $nm] = $this->nextMonth($jy, $jm);
+
+        $keyboard = [[
+            ['text' => '◀ ماه بعد', 'callback_data' => "hol:{$ny}:{$nm}"],
+            ['text' => "{$monthName} {$jy}", 'callback_data' => 'noop'],
+            ['text' => 'ماه قبل ▶', 'callback_data' => "hol:{$py}:{$pm}"],
+        ]];
+
+        return [
+            'text'         => $text,
+            'reply_markup' => ['inline_keyboard' => $keyboard],
+        ];
+    }
+
+    public function renderCurrentHolidaysMonth(): array
+    {
+        [$y, $m] = $this->getTodayJalali();
+        return $this->renderHolidaysMonth($y, $m);
     }
 
     /** @return array<int, true> */
