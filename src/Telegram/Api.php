@@ -52,17 +52,30 @@ class Api
     }
 
     public function editMessageText(
-        int|string $chatId,
-        int        $messageId,
-        string     $text,
-        array      $options = []
+        int|string|null $chatId,
+        ?int            $messageId,
+        string          $text,
+        array           $options = []
     ): void {
-        $this->request('editMessageText', array_merge([
-            'chat_id'    => $chatId,
-            'message_id' => $messageId,
+        $payload = array_merge([
             'text'       => $text,
             'parse_mode' => 'HTML',
-        ], $options));
+        ], $options);
+        if (empty($payload['inline_message_id'])) {
+            $payload['chat_id']    = $chatId;
+            $payload['message_id'] = $messageId;
+        }
+        $this->request('editMessageText', $payload);
+    }
+
+    public function answerInlineQuery(string $inlineQueryId, array $results): void
+    {
+        $this->request('answerInlineQuery', [
+            'inline_query_id' => $inlineQueryId,
+            'results'         => $results,
+            'cache_time'      => 5,
+            'is_personal'     => true,
+        ]);
     }
 
     public function answerCallbackQuery(

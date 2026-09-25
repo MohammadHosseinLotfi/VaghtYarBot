@@ -79,4 +79,29 @@ class Update
     {
         return $this->data['callback_query']['from']['id'] ?? null;
     }
+
+    public function getCallbackInlineMessageId(): ?string
+    {
+        return $this->data['callback_query']['inline_message_id'] ?? null;
+    }
+
+    public function isInlineQuery(): bool
+    {
+        return !empty($this->data['inline_query']);
+    }
+
+    public function getInlineQueryId(): ?string
+    {
+        return $this->data['inline_query']['id'] ?? null;
+    }
+
+    public function getInlineQuery(): string
+    {
+        return trim((string) ($this->data['inline_query']['query'] ?? ''));
+    }
+
+    public function getInlineUserId(): ?int
+    {
+        return $this->data['inline_query']['from']['id'] ?? null;
+    }
 }

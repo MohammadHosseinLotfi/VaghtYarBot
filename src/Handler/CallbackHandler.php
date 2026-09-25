@@ -14,6 +14,10 @@ use App\Repository\NotifyRepository;
 
 class CallbackHandler
 {
+    private ?string $inlineId = null;
+    private ?int $chatId = null;
+    private ?int $msgId = null;
+
     public function __construct(
         private Api                $api,
         private CalendarService    $calendar,
@@ -29,11 +33,15 @@ class CallbackHandler
     {
         $data   = $update->getCallbackData();
         $cbId   = $update->getCallbackQueryId();
-        $chatId = $update->getCallbackChatId();
-        $msgId  = $update->getCallbackMessageId();
         $userId = $update->getCallbackUserId();
+        $this->chatId   = $update->getCallbackChatId();
+        $this->msgId    = $update->getCallbackMessageId();
+        $this->inlineId = $update->getCallbackInlineMessageId();
 
-        if (!$cbId || !$chatId || !$msgId || !$userId) {
+        if (!$cbId || !$userId) {
+            return;
+        }
+        if (!$this->inlineId && (!$this->chatId || !$this->msgId)) {
             return;
         }
 
@@ -45,7 +53,7 @@ class CallbackHandler
         }
 
         if (preg_match('/^nt:([a-z]+)$/', $data, $m)) {
-            $this->toggleNotify($cbId, $chatId, $msgId, $userId, $m[1]);
+            $this->toggleNotify($cbId, $userId, $m[1]);
             return;
         }
 
@@ -55,18 +63,18 @@ class CallbackHandler
                 $this->api->answerCallbackQuery($cbId, '❌ شهر پیدا نشد.', true);
                 return;
             }
-            $this->beginNotifyCity($cbId, $chatId, $msgId, $userId, $city, true);
+            $this->beginNotifyCity($cbId, $userId, $city, true);
             return;
         }
 
         if ($data === 'ntchg:ok') {
-            $this->confirmCityChange($cbId, $chatId, $msgId, $userId);
+            $this->confirmCityChange($cbId, $userId);
             return;
         }
 
         if ($data === 'ntchg:no') {
             $this->userRepo->forgetContext($userId, 'notify_city');
-            $this->api->editMessageText($chatId, $msgId, '❌ عملیات لغو شد.');
+            $this->edit('❌ عملیات لغو شد.');
             $this->api->answerCallbackQuery($cbId);
             return;
         }
@@ -76,7 +84,7 @@ class CallbackHandler
             if ($city) {
                 $markup = $this->saveMarkup($userId, $city);
                 $opts   = $markup ? ['reply_markup' => $markup] : [];
-                $this->api->editMessageText($chatId, $msgId, $this->prayerTime->getForCity($city), $opts);
+                $this->edit($this->prayerTime->getForCity($city), $opts);
                 $this->api->answerCallbackQuery($cbId);
             } else {
                 $this->api->answerCallbackQuery($cbId, '❌ شهر پیدا نشد.', true);
@@ -86,7 +94,7 @@ class CallbackHandler
 
         if (preg_match('/^cal:(\d{4}):(\d{1,2})$/', $data, $m)) {
             $view = $this->calendar->renderMonth((int) $m[1], (int) $m[2]);
-            $this->api->editMessageText($chatId, $msgId, $view['text'], [
+            $this->edit($view['text'], [
                 'reply_markup' => $view['reply_markup'],
             ]);
             $this->api->answerCallbackQuery($cbId);
@@ -95,7 +103,7 @@ class CallbackHandler
 
         if ($data === 'cal:today') {
             $view = $this->calendar->renderCurrentMonth();
-            $this->api->editMessageText($chatId, $msgId, $view['text'], [
+            $this->edit($view['text'], [
                 'reply_markup' => $view['reply_markup'],
             ]);
             $this->api->answerCallbackQuery($cbId, '📅 برگشتی به ماه جاری');
@@ -104,7 +112,7 @@ class CallbackHandler
 
         if (preg_match('/^calday:(\d{4}):(\d{1,2}):(\d{1,2})$/', $data, $m)) {
             $view = $this->calendar->renderDayView((int) $m[1], (int) $m[2], (int) $m[3]);
-            $this->api->editMessageText($chatId, $msgId, $view['text'], [
+            $this->edit($view['text'], [
                 'reply_markup' => $view['reply_markup'],
             ]);
             $this->api->answerCallbackQuery($cbId);
@@ -113,7 +121,7 @@ class CallbackHandler
 
         if (preg_match('/^hol:(\d{4}):(\d{1,2})$/', $data, $m)) {
             $view = $this->calendar->renderHolidaysMonth((int) $m[1], (int) $m[2]);
-            $this->api->editMessageText($chatId, $msgId, $view['text'], [
+            $this->edit($view['text'], [
                 'reply_markup' => $view['reply_markup'],
             ]);
             $this->api->answerCallbackQuery($cbId);
@@ -145,7 +153,7 @@ class CallbackHandler
         $this->api->answerCallbackQuery($cbId, $toast);
     }
 
-    private function toggleNotify(string $cbId, int $chatId, int $msgId, int $userId, string $prayer): void
+    private function toggleNotify(string $cbId, int $userId, string $prayer): void
     {
         if (!$this->notifyRepo->isPrayer($prayer)) {
             $this->api->answerCallbackQuery($cbId);
@@ -160,9 +168,7 @@ class CallbackHandler
 
         $settings = $this->notifyRepo->toggle($userId, $prayer);
         $label    = $this->locationRepo->label($location);
-        $this->api->editMessageText(
-            $chatId,
-            $msgId,
+        $this->edit(
             $this->notifyService->settingsText($label),
             ['reply_markup' => $this->notifyService->settingsMarkup($settings)]
         );
@@ -171,8 +177,6 @@ class CallbackHandler
 
     public function beginNotifyCity(
         string $cbId,
-        int $chatId,
-        int $msgId,
         int $userId,
         array $city,
         bool $edit
@@ -186,7 +190,7 @@ class CallbackHandler
             if ($saved === null) {
                 $this->locationRepo->upsert($userId, $cityId, $lat, $lng);
             }
-            $this->showSettings($chatId, $msgId, $userId, $edit);
+            $this->showSettings($userId, $edit);
             $this->api->answerCallbackQuery($cbId);
             return;
         }
@@ -204,14 +208,14 @@ class CallbackHandler
         $markup = $this->notifyService->confirmChangeMarkup();
 
         if ($edit) {
-            $this->api->editMessageText($chatId, $msgId, $text, ['reply_markup' => $markup]);
+            $this->edit($text, ['reply_markup' => $markup]);
         } else {
-            $this->api->sendMessage($chatId, $text, ['reply_markup' => $markup]);
+            $this->api->sendMessage((int) $this->chatId, $text, ['reply_markup' => $markup]);
         }
         $this->api->answerCallbackQuery($cbId);
     }
 
-    private function confirmCityChange(string $cbId, int $chatId, int $msgId, int $userId): void
+    private function confirmCityChange(string $cbId, int $userId): void
     {
         $pending = $this->userRepo->getContext($userId)['notify_city'] ?? null;
         if (!is_array($pending) || !isset($pending['lat'], $pending['lng'])) {
@@ -223,11 +227,11 @@ class CallbackHandler
         $this->locationRepo->upsert($userId, $cityId, (float) $pending['lat'], (float) $pending['lng']);
         $this->userRepo->forgetContext($userId, 'notify_city');
 
-        $this->showSettings($chatId, $msgId, $userId, true);
+        $this->showSettings($userId, true);
         $this->api->answerCallbackQuery($cbId);
     }
 
-    private function showSettings(int $chatId, int $msgId, int $userId, bool $edit): void
+    private function showSettings(int $userId, bool $edit): void
     {
         $location = $this->locationRepo->findByUserId($userId);
         $label    = $this->locationRepo->label($location);
@@ -236,10 +240,21 @@ class CallbackHandler
         $markup   = $this->notifyService->settingsMarkup($settings);
 
         if ($edit) {
-            $this->api->editMessageText($chatId, $msgId, $text, ['reply_markup' => $markup]);
+            $this->edit($text, ['reply_markup' => $markup]);
             return;
         }
-        $this->api->sendMessage($chatId, $text, ['reply_markup' => $markup]);
+        $this->api->sendMessage((int) $this->chatId, $text, ['reply_markup' => $markup]);
+    }
+
+    private function edit(string $text, array $options = []): void
+    {
+        if ($this->inlineId) {
+            $this->api->editMessageText(null, null, $text, array_merge($options, [
+                'inline_message_id' => $this->inlineId,
+            ]));
+            return;
+        }
+        $this->api->editMessageText($this->chatId, $this->msgId, $text, $options);
     }
 
     private function saveMarkup(int $userId, array $city): ?array

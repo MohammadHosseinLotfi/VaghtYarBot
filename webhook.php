@@ -17,6 +17,7 @@ use App\Service\NotifyService;
 use App\Service\DateConvertService;
 use App\Handler\CommandHandler;
 use App\Handler\CallbackHandler;
+use App\Handler\InlineHandler;
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (empty($input)) exit;
@@ -43,6 +44,21 @@ try {
     $nowruz       = new NowruzService();
     $notifySvc    = new NotifyService($notifyRepo, $locationRepo);
     $dateConvert  = new DateConvertService($eventRepo);
+
+    if ($update->isInlineQuery()) {
+        (new InlineHandler(
+            $api,
+            $dateTime,
+            $eventRepo,
+            $cityRepo,
+            $locationRepo,
+            $prayerTime,
+            $calendar,
+            $nowruz,
+            $dateConvert
+        ))->handle($update);
+        exit;
+    }
 
     if ($update->getMessage()) {
         $handler = new CommandHandler(
